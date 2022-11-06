@@ -34,10 +34,10 @@ def png_to_dds(pes_version: int = 21):
 def sort_all_images(league_name, pes_version: int = 21):
     all_pngs = get_pngs()
     if all_pngs != []:
-        if os.path.exists('Minifaces') == False:
-            os.mkdir('Minifaces')
+        if os.path.exists('temp/Minifaces') == False:
+            os.makedirs('temp/Minifaces')
         league_name = os.path.join(
-            'Minifaces', league_name, 'common/render/symbol/player')
+            'temp/Minifaces', league_name, 'common/render/symbol/player')
         if os.path.exists('PNG') == False:
             os.mkdir('PNG')
         if os.path.exists(league_name) == False:
