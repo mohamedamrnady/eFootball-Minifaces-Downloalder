@@ -1,0 +1,25 @@
+name: New Release
+
+on:
+  schedule:
+    - cron: '0 7 * * 4'
+    
+jobs:
+  get_minifaces:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - uses: actions/setup-python@master
+        with:
+          python-version: '3.10' 
+      - run: python script.py
+      - run: python create_livecpk_lines.py
+      - run: python create_archive.py
+      - uses: xresloader/upload-to-github-release@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: "*.zip"
+          draft: false
+          tags: true
+          tag_name: "Release"
