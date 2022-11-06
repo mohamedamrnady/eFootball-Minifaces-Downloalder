@@ -1,6 +1,6 @@
 name: Manual Release
 
-on: [workflow_call]
+on: [workflow_dispatch]
 
 jobs:
   get_minifaces:
