@@ -1,0 +1,8 @@
+shutil
+datetime
+os
+requests
+bs4
+typing
+wand
+pandas

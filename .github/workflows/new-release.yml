@@ -2,8 +2,8 @@ name: New Release
 
 on:
   schedule:
-    - cron: '0 7 * * 4'
-    
+    - cron: "0 7 * * 4"
+
 jobs:
   get_minifaces:
     runs-on: ubuntu-latest
@@ -11,7 +11,8 @@ jobs:
       - uses: actions/checkout@master
       - uses: actions/setup-python@master
         with:
-          python-version: '3.10' 
+          python-version: "3.10"
+      - run: pip install -r requirements.txt
       - run: python script.py
       - run: python create_livecpk_lines.py
       - run: python create_archive.py
