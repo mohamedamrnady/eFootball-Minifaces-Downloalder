@@ -2,10 +2,10 @@ name: New Release
 
 on:
   schedule:
-    - cron: "0 7 * * 4"
+    - cron: "0 13 * * 4"
 
 jobs:
-  get_minifaces:
+  Release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master

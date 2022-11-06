@@ -3,7 +3,7 @@ name: Manual Release
 on: [workflow_dispatch]
 
 jobs:
-  get_minifaces:
+  Release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
