@@ -2,7 +2,8 @@ name: New Release
 
 on:
   schedule:
-    - cron: "0 11 * * 4"
+    - cron: "0 19 * * 4"
+  workflow_dispatch:
 
 jobs:
   Release:
