@@ -36,7 +36,7 @@ for counter, league_url in enumerate(leagues_urls):
         national_urls.append(league_url)
 
 for counter, national_url in enumerate(national_urls):
-    print('Started Nation(' + str(counter + 1) + '/' +
+    print('Started Nation (' + str(counter + 1) + '/' +
           str(len(national_urls)) + ') : ' + national_names[counter])
     teams_urls = teams_urls_scrapper(national_url)
     for team_url in teams_urls:
