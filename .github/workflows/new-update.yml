@@ -20,3 +20,5 @@ jobs:
         with:
           file: "*.zip"
           draft: false
+          tags: true
+          tag_name: "Release"
