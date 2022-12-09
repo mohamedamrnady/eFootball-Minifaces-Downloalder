@@ -1,4 +1,3 @@
-from os import cpu_count
 import requests
 from bs4 import BeautifulSoup as bs
 
@@ -8,10 +7,7 @@ headers = {
 
 def players_in_team(url):
     all_players = []
-
-    team_name = str(url.split('/www.pesmaster.com/')[1].split('/')[0])
-    r = requests.get(url, headers=headers)
-    soup = bs(r.content, 'html.parser')
+    soup = bs(requests.get(url, headers=headers).content, 'html.parser')
     soup.find('a').get_attribute_list
     players_div = soup.find_all(
         'div', attrs={'class': 'player-card-container'})
