@@ -40,7 +40,3 @@ def miniface_downloader(url):
                 requests.get(all_pictures[len(all_pictures) - 1]).content)
     except:
         pass
-
-
-miniface_downloader(
-    'https://www.pesmaster.com/son-heung-min/efootball-2022/player/52781121579063/')
