@@ -4,14 +4,13 @@ from datetime import date
 
 
 def get_last_thursday_date():
+    thursday = 3
     today = date.weekday(date.today())
     day = int(str(date.today()).split("-")[2])
     if today < 3:
         thursday = day - today - 4
     if today > 3:
         thursday = day - today + 3
-    if thursday == today:
-        thursday = today
     if thursday < 10:
         thursday = str(0) + str(thursday)
     return str(date.today()).split(
