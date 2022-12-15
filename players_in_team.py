@@ -11,7 +11,6 @@ def players_in_team(url):
 
     r = requests.get(url, headers=headers)
     soup = bs(r.content, 'html.parser')
-    soup.find('a').get_attribute_list
     players_div = soup.find_all(
         'div', attrs={'class': 'player-card-container'})
     for counter, players in enumerate(players_div):
