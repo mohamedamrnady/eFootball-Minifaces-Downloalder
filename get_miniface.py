@@ -8,7 +8,8 @@ headers = {
 
 def miniface_downloader(url):
     all_pictures = []
-    soup = bs(requests.get(url, headers=headers).content, 'html.parser')
+    r = requests.get(url, headers=headers)
+    soup = bs(r.content, 'html.parser')
 
     cards_div = soup.find_all(
         'div', attrs={'class': 'player-card-container'})
