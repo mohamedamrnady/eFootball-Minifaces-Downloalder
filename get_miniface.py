@@ -33,8 +33,3 @@ def miniface_downloader(url):
                 requests.get(all_pictures[len(all_pictures) - 1]).content)
     except:
         pass
-
-
-pp = 'hi'
-
-pp.find()
