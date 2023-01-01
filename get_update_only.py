@@ -30,7 +30,7 @@ def get_last_thursday_date():
     if thursday < 10:
         thursday = str(0) + str(thursday)
     if month < 10:
-        month = str(0) + str(thursday)
+        month = str(0) + str(month)
     return f"{str(year)}-{str(month)}-{str(thursday)}"
 
 
