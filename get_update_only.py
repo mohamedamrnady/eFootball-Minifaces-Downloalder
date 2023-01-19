@@ -4,11 +4,12 @@ from datetime import date
 
 
 def get_last_thursday_date():
-    thursday = 3
     today = date.weekday(date.today())
     day = int(str(date.today()).split("-")[2])
     month = int(str(date.today()).split("-")[1])
     year = int(str(date.today()).split("-")[0])
+    if today == 3:
+        thursday = day
     if today < 3:
         thursday = day - today - 4
     if today > 3:
@@ -36,7 +37,7 @@ def get_last_thursday_date():
 
 url = 'https://www.pesmaster.com/efootball-2022/player/featured/?date=' + \
     get_last_thursday_date()
-
+print(url)
 for player_url in players_in_update(url):
     miniface_downloader(player_url)
     png_to_dds()
