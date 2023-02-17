@@ -26,9 +26,12 @@ def png_to_dds(pes_version: int = 21):
     all_pngs = get_pngs()
     all_dds = get_dds(all_pngs, pes_version)
     for counter, png in enumerate(all_pngs):
-        with image.Image(filename=png) as img:
-            img.compression = "dxt3"
-            img.save(filename=all_dds[counter])
+        try:
+            with image.Image(filename=png) as img:
+                img.compression = "dxt3"
+                img.save(filename=all_dds[counter])
+        except:
+            print(f"Couldn't read {png}")
 
 
 def sort_all_images(league_name, pes_version: int = 21):
@@ -45,4 +48,7 @@ def sort_all_images(league_name, pes_version: int = 21):
         for png in all_pngs:
             os.rename(png, os.path.join('PNG', png))
         for dds in get_dds(all_pngs, pes_version):
-            os.rename(dds, os.path.join(league_name, dds))
+            try:
+                os.rename(dds, os.path.join(league_name, dds))
+            except:
+                print(f"Couldn't rename {dds}")
