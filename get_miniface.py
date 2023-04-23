@@ -24,7 +24,7 @@ def miniface_downloader(url):
                         pictures['data-src']
                     picture_name = str(picture_url.split(
                         '/Variation2022/')[1].split('/')[0])
-                    if picture_name.find('b') == -1 and picture_name.find('dummy') != -1:
+                    if picture_name.find('b') == -1 and picture_name.find('dummy') == -1:
                         all_pictures.append(picture_url)
         if len(all_pictures) != 0:
             open(str(url.split('/player/')[1].split('/')[0]) + '.png', "wb").write(
