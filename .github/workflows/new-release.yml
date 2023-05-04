@@ -16,7 +16,6 @@ jobs:
           sudo apt-get install python3-pip
       - name: Install Requirements
         run: |
-          ls
           python3 -m pip install -r requirements.txt
       - name: Run Script
         run: python3 script.py

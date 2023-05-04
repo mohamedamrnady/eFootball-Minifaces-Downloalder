@@ -1,4 +1,4 @@
-name: New Update
+name: New Release
 
 on:
   schedule:
@@ -9,14 +9,14 @@ jobs:
   Release:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@master
       - name: Setup Environment
         run: |
           sudo apt-get update
           sudo apt-get install python3-pip
       - name: Install Requirements
         run: |
-          ls
-          pip3 install -r requirements.txt
+          python3 -m pip install -r requirements.txt
       - name: Run Script
         run: python3 get_update_only.py
       - name: Create Livecpk Lines
