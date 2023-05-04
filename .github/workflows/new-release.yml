@@ -9,6 +9,7 @@ jobs:
   Release:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@master
       - name: Setup Environment
         run: |
           sudo apt-get update
