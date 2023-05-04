@@ -9,16 +9,17 @@ jobs:
   Release:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Python
-        run: sudo apt-get install python2 python3
-      - name: Install Requirements
-        run: pip install -r requirements.txt
+      - name: Setup Environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install python3-pip
+          pip install -r requirements.txt
       - name: Run Script
-        run: python get_update_only.py
+        run: python3 get_update_only.py
       - name: Create Livecpk Lines
-        run: python create_livecpk_lines.py
+        run: python3 create_livecpk_lines.py
       - name: Create Archive
-        run: python create_archive.py
+        run: python3 create_archive.py
       - name: Set ENV
         run: echo "RELEASE_TAG=$(ls -R | grep '\.zip$')" >> $GITHUB_ENV
       - uses: xresloader/upload-to-github-release@main
