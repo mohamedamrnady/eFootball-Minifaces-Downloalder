@@ -46,9 +46,14 @@ def sort_all_images(league_name, pes_version: int = 21):
         if os.path.exists(league_name) == False:
             os.makedirs(league_name)
         for png in all_pngs:
-            os.rename(png, os.path.join('PNG', png))
+            try:
+                os.rename(png, os.path.join('PNG', png))
+            except:
+                os.remove(os.path.join('PNG', png))
+                os.rename(png, os.path.join('PNG', png))
         for dds in get_dds(all_pngs, pes_version):
             try:
                 os.rename(dds, os.path.join(league_name, dds))
             except:
-                print(f"Couldn't rename {dds}")
+                os.remove(os.path.join(league_name, dds))
+                os.rename(dds, os.path.join(league_name, dds))
