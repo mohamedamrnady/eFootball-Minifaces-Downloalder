@@ -1,4 +1,4 @@
-name: New Release
+name: New Update
 
 on:
   schedule:
@@ -6,10 +6,24 @@ on:
   workflow_dispatch:
 
 jobs:
-  Release:
+  Update:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
+      - name: Get last tag
+        id: last_tag
+        uses: oprypin/find-latest-tag@v1
+        continue-on-error: true
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          releases-only: true
+      - name: Get next version code
+        id: next_ver_code
+        run: |
+          TAG="${{ steps.last_tag.outputs.tag }}"
+          if [ -z "$TAG" ]; then TAG=0; fi
+          echo "NEXT_VER_CODE=$((TAG + 1))" >> $GITHUB_OUTPUT
       - name: Setup Environment
         run: |
           sudo apt-get update
@@ -24,7 +38,7 @@ jobs:
       - name: Create Archive
         run: python3 create_archive.py
       - name: Set ENV
-        run: echo "RELEASE_TAG=$(ls -R | grep '\.zip$')" >> $GITHUB_ENV
+        run: echo "RELEASE_NAME=$(ls -R | grep '\.zip$')" >> $GITHUB_ENV
       - uses: xresloader/upload-to-github-release@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -32,4 +46,5 @@ jobs:
           file: "*.zip"
           draft: false
           tags: true
-          tag_name: "${{ env.RELEASE_TAG }}"
+          tag_name: ${{ steps.next_ver_code.outputs.NEXT_VER_CODE }}
+          default_release_name: "${{ env.RELEASE_NAME }}"
