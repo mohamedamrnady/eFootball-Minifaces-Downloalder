@@ -14,9 +14,22 @@ def players_in_team(url):
     players_div = soup.find_all("div", attrs={"class": "player-card-container"})
     if len(players_div) == 5:
         for counter, players in enumerate(players_div):
-            if counter != 4:
+            if counter == 4:
                 players_url = players.find_all("a")
                 for player_url in players_url:
-                    player_url = player_url.get_attribute_list("href")[0]
-                    all_players.append("https://www.pesmaster.com" + player_url)
+                    original_link = player_url.get_attribute_list("href")[0].split(
+                        "/player/"
+                    )
+                    real_player_id = str(
+                        int(
+                            hex(int(original_link[1].replace("/", "")))[-5:],
+                            base=16,
+                        )
+                    )
+                    final_url = f"https://www.pesmaster.com{original_link[0]}/player/{real_player_id}"
+                    try:
+                        all_players.index(final_url)
+                    except:
+                        print(final_url)
+                        all_players.append(final_url)
     return all_players
