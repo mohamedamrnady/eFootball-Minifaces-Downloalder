@@ -26,7 +26,7 @@ def players_in_team(url):
                             base=16,
                         )
                     )
-                    final_url = f"https://www.pesmaster.com{original_link[0]}/player/{real_player_id}"
+                    final_url = f"https://www.pesmaster.com{original_link[0]}/player/{real_player_id}/"
                     try:
                         all_players.index(final_url)
                     except:
