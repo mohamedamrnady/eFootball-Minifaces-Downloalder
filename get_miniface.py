@@ -32,7 +32,19 @@ def miniface_downloader(url):
                         all_pictures.append(picture_url)
         if len(all_pictures) != 0:
             open(str(url.split("/player/")[1].split("/")[0]) + ".png", "wb").write(
-                requests.get(all_pictures[len(all_pictures) - 1]).content
+                download_image(all_pictures)
             )
     except:
         pass
+
+
+def download_image(url_list: list):
+    image = requests.get(url_list[len(url_list) - 1])
+    if (
+        image.status_code == 200
+        and image.content.startswith(b"<!DOCTYPE html>") == False
+    ):
+        return image.content
+    else:
+        url_list.pop()
+        return download_image(url_list)
