@@ -40,7 +40,7 @@ def miniface_downloader(url):
 
 
 def download_image(url_list: list):
-    if len(url_list) >= 2:
+    if len(url_list) > 0:
         image = requests.get(url_list[len(url_list) - 1])
         if (
             image.status_code == 200
@@ -52,8 +52,3 @@ def download_image(url_list: list):
             return download_image(url_list)
     else:
         raise ValueError
-
-
-miniface_downloader(
-    "https://www.pesmaster.com/robert-sanchez/efootball-2022/player/128299/"
-)
