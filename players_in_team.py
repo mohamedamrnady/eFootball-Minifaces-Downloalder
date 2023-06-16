@@ -30,6 +30,5 @@ def players_in_team(url):
                     try:
                         all_players.index(final_url)
                     except:
-                        print(final_url)
                         all_players.append(final_url)
     return all_players
