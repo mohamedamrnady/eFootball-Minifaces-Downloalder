@@ -30,21 +30,30 @@ def miniface_downloader(url):
                         and picture_name.find("dummy") == -1
                     ):
                         all_pictures.append(picture_url)
+        image_bytes = download_image(all_pictures)
         if len(all_pictures) != 0:
             open(str(url.split("/player/")[1].split("/")[0]) + ".png", "wb").write(
-                download_image(all_pictures)
+                image_bytes
             )
     except:
         pass
 
 
 def download_image(url_list: list):
-    image = requests.get(url_list[len(url_list) - 1])
-    if (
-        image.status_code == 200
-        and image.content.startswith(b"<!DOCTYPE html>") == False
-    ):
-        return image.content
+    if len(url_list) >= 2:
+        image = requests.get(url_list[len(url_list) - 1])
+        if (
+            image.status_code == 200
+            and image.content.startswith(b"<!DOCTYPE html>") == False
+        ):
+            return image.content
+        else:
+            url_list.pop()
+            return download_image(url_list)
     else:
-        url_list.pop()
-        return download_image(url_list)
+        raise ValueError
+
+
+miniface_downloader(
+    "https://www.pesmaster.com/robert-sanchez/efootball-2022/player/128299/"
+)
