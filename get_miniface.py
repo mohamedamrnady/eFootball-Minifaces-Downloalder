@@ -6,7 +6,7 @@ headers = {
 }
 
 
-def miniface_downloader(url):
+def miniface_downloader(url: str):
     all_pictures = []
     r = requests.get(url, headers=headers)
     soup = bs(r.content, "html.parser")
@@ -41,14 +41,28 @@ def miniface_downloader(url):
 
 def download_image(url_list: list):
     if len(url_list) > 0:
-        image = requests.get(url_list[len(url_list) - 1])
-        if (
-            image.status_code == 200
-            and image.content.startswith(b"<!DOCTYPE html>") == False
-        ):
-            return image.content
-        else:
-            url_list.pop()
-            return download_image(url_list)
+        if "pesmaster" in url_list[len(url_list) - 1]:
+            image = requests.get(url_list[len(url_list) - 1])
+            if (
+                image.status_code == 200
+                and image.content.startswith(b"<!DOCTYPE html>") == False
+            ):
+                return image.content
+            else:
+                url_list[len(url_list) - 1] = url_list[len(url_list) - 1].replace(
+                    "https://www.pesmaster.com/efootball-2022/graphics/players/Variation2022/",
+                    "https://efootballhub.net/images/efootball23/players/",
+                )
+                return download_image(url_list)
+        elif "efootballhub" in url_list[len(url_list) - 1]:
+            image = requests.get(url_list[len(url_list) - 1])
+            if (
+                image.status_code == 200
+                and image.content.startswith(b"<!DOCTYPE html>") == False
+            ):
+                return image.content
+            else:
+                url_list.pop()
+                return download_image(url_list)
     else:
         raise ValueError
