@@ -41,28 +41,20 @@ def miniface_downloader(url: str):
 
 def download_image(url_list: list):
     if len(url_list) > 0:
-        if "pesmaster" in url_list[len(url_list) - 1]:
-            image = requests.get(url_list[len(url_list) - 1])
-            if (
-                image.status_code == 200
-                and image.content.startswith(b"<!DOCTYPE html>") == False
-            ):
-                return image.content
-            else:
+        image = requests.get(url_list[len(url_list) - 1])
+        if (
+            image.status_code == 200
+            and image.content.startswith(b"<!DOCTYPE html>") == False
+        ):
+            return image.content
+        else:
+            if "pesmaster" in url_list[len(url_list) - 1]:
                 url_list[len(url_list) - 1] = url_list[len(url_list) - 1].replace(
                     "https://www.pesmaster.com/efootball-2022/graphics/players/Variation2022/",
                     "https://efootballhub.net/images/efootball23/players/",
                 )
-                return download_image(url_list)
-        elif "efootballhub" in url_list[len(url_list) - 1]:
-            image = requests.get(url_list[len(url_list) - 1])
-            if (
-                image.status_code == 200
-                and image.content.startswith(b"<!DOCTYPE html>") == False
-            ):
-                return image.content
-            else:
+            elif "efootballhub" in url_list[len(url_list) - 1]:
                 url_list.pop()
-                return download_image(url_list)
+            return download_image(url_list)
     else:
         raise ValueError
