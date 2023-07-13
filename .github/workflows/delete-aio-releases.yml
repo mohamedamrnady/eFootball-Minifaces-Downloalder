@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Check for AIO releases
         run: |
-          releases=$(curl -s https://api.github.com/repos/${{ secrets.GITHUB_USERNAME }}/${{ secrets.GITHUB_REPO }}/releases | jq '[.[]] | .name')
+          releases=$(curl -s https://api.github.com/repos/${{ secrets.GITHUB_USERNAME }}/${{ secrets.GITHUB_REPO }}/releases | jq '[.[]] | group_by(.name)')
           latest_release=$(curl -s https://api.github.com/repos/${{ secrets.GITHUB_USERNAME }}/${{ secrets.GITHUB_REPO }}/releases/latest | jq -r .name)
           for release in $releases; do
             if [[ $release == "AIO-*" ]] && [[ $release != $latest_release ]]; then
