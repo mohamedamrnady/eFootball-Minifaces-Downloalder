@@ -8,6 +8,7 @@ headers = {
 
 def miniface_downloader(url: str):
     all_pictures = []
+    pictures_versions = []
     r = requests.get(url, headers=headers)
     soup = bs(r.content, "html.parser")
 
@@ -25,12 +26,18 @@ def miniface_downloader(url: str):
                     picture_name = str(
                         picture_url.split("/Variation2022/")[1].split("/")[0]
                     )
+                    pictures_versions.append(
+                        int(
+                            hex(int(picture_name.replace("_.png", "")))[:-6][4:],
+                            base=16,
+                        )
+                    )
                     if (
                         picture_name.find("b") == -1
                         and picture_name.find("dummy") == -1
                     ):
                         all_pictures.append(picture_url)
-        image_bytes = download_image(all_pictures)
+        image_bytes = download_image(all_pictures, pictures_versions)
         if len(all_pictures) != 0:
             open(str(url.split("/player/")[1].split("/")[0]) + ".png", "wb").write(
                 image_bytes
@@ -39,22 +46,24 @@ def miniface_downloader(url: str):
         pass
 
 
-def download_image(url_list: list):
+def download_image(url_list: list, versions: list):
     if len(url_list) > 0:
-        image = requests.get(url_list[len(url_list) - 1])
+        index = versions.index(max(versions))
+        image = requests.get(url_list[index])
         if (
             image.status_code == 200
             and image.content.startswith(b"<!DOCTYPE html>") == False
         ):
             return image.content
         else:
-            if "pesmaster" in url_list[len(url_list) - 1]:
-                url_list[len(url_list) - 1] = url_list[len(url_list) - 1].replace(
+            if "pesmaster" in url_list[index]:
+                url_list[index] = url_list[index].replace(
                     "https://www.pesmaster.com/efootball-2022/graphics/players/Variation2022/",
                     "https://efootballhub.net/images/efootball23/players/",
                 )
-            elif "efootballhub" in url_list[len(url_list) - 1]:
-                url_list.pop()
-            return download_image(url_list)
+            elif "efootballhub" in url_list[index]:
+                del url_list[index]
+                del versions[index]
+            return download_image(url_list, versions)
     else:
         raise ValueError
