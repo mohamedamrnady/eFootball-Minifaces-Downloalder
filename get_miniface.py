@@ -43,7 +43,7 @@ def miniface_downloader(url: str):
                 image_bytes
             )
     except:
-        pass
+        print("Skipped " + url)
 
 
 def download_image(url_list: list, versions: list):
