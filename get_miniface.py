@@ -6,6 +6,10 @@ headers = {
 }
 
 
+def reverse_hex(a):
+    return "".join(reversed([a[i : i + 2] for i in range(0, len(a), 2)]))
+
+
 def miniface_downloader(url: str, isUpdate=False):
     all_pictures = []
     player_ids = []
@@ -42,7 +46,11 @@ def miniface_downloader(url: str, isUpdate=False):
                         player_ids.append(int(picture_name.replace("_.png", "")))
                         pictures_versions.append(
                             int(
-                                hex(int(picture_name.replace("_.png", "")))[:-6][-4:],
+                                reverse_hex(
+                                    hex(int(picture_name.replace("_.png", "")))[:-6][
+                                        -4:
+                                    ],
+                                ),
                                 base=16,
                             )
                         )
