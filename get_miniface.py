@@ -47,7 +47,12 @@ def miniface_downloader(url: str, isUpdate=False):
         image_bytes = download_image(all_pictures, pictures_versions)
         if len(all_pictures) != 0:
             if isUpdate:
-                image_name = min(player_ids)
+                image_name = str(
+                    int(
+                        hex(player_ids[0])[-6:],
+                        base=16,
+                    )
+                )
             else:
                 image_name = str(url.split("/player/")[1].split("/")[0])
             open(image_name + ".png", "wb").write(image_bytes)
