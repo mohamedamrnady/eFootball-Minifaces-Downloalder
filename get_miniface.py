@@ -21,9 +21,10 @@ def miniface_downloader(url: str, isUpdate=False):
         )
         if isUpdate:
             cards_div.insert(
+                0,
                 soup.find_all("figure", attrs={"class": "player-card efootball-2022"})[
                     0
-                ]
+                ],
             )
         for cards in cards_div:
             pictures_div = cards.find_all("img")
