@@ -45,8 +45,10 @@ def miniface_downloader(url: str, isUpdate=False):
                                 base=16,
                             )
                         )
-
-        image_bytes = download_image(all_pictures, pictures_versions)
+        if isUpdate:
+            image_bytes = download_image([all_pictures[0]], [pictures_versions[0]])
+        else:
+            image_bytes = download_image(all_pictures, pictures_versions)
         if len(all_pictures) != 0:
             if isUpdate:
                 image_name = str(
