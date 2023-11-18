@@ -6,8 +6,9 @@ headers = {
 }
 
 
-def miniface_downloader(url: str):
+def miniface_downloader(url: str, isUpdate=False):
     all_pictures = []
+    player_ids = []
     pictures_versions = []
     r = requests.get(url, headers=headers)
     soup = bs(r.content, "html.parser")
@@ -15,9 +16,12 @@ def miniface_downloader(url: str):
     cards_div = soup.find_all("div", attrs={"class": "player-card-container"})
 
     try:
-        cards_div = cards_div[len(cards_div) - 1].find_all(
-            "figure", attrs={"class": "player-card efootball-2022"}
-        )
+        if isUpdate:
+            cards_div = [cards_div[0]]
+        else:
+            cards_div = cards_div[len(cards_div) - 1].find_all(
+                "figure", attrs={"class": "player-card efootball-2022"}
+            )
         for cards in cards_div:
             pictures_div = cards.find_all("img")
             for pictures in pictures_div:
@@ -31,18 +35,22 @@ def miniface_downloader(url: str):
                         and picture_name.find("dummy") == -1
                     ):
                         all_pictures.append(picture_url)
+                        player_ids.append(int(picture_name.replace("_.png", "")))
                         pictures_versions.append(
                             int(
                                 hex(int(picture_name.replace("_.png", "")))[:-6][-4:],
                                 base=16,
                             )
                         )
+                        print(hex(int(picture_name.replace("_.png", "")))[:-6][-4:])
 
         image_bytes = download_image(all_pictures, pictures_versions)
         if len(all_pictures) != 0:
-            open(str(url.split("/player/")[1].split("/")[0]) + ".png", "wb").write(
-                image_bytes
-            )
+            if isUpdate:
+                image_name = min(player_ids)
+            else:
+                image_name = str(url.split("/player/")[1].split("/")[0])
+            open(image_name + ".png", "wb").write(image_bytes)
     except:
         print("Skipped " + url)
 
