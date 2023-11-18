@@ -42,7 +42,6 @@ def miniface_downloader(url: str, isUpdate=False):
                                 base=16,
                             )
                         )
-                        print(hex(int(picture_name.replace("_.png", "")))[:-6][-4:])
 
         image_bytes = download_image(all_pictures, pictures_versions)
         if len(all_pictures) != 0:
