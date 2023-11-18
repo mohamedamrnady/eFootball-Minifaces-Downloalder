@@ -60,8 +60,8 @@ def miniface_downloader(url: str, isUpdate=False):
             else:
                 image_name = str(url.split("/player/")[1].split("/")[0])
             open(image_name + ".png", "wb").write(image_bytes)
-    except:
-        print("Skipped " + url)
+    except Exception as e:
+        print(f"Skipped {url}: {e}")
 
 
 def download_image(url_list: list, versions: list):
