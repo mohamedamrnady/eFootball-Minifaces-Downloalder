@@ -1,5 +1,7 @@
 import requests
 from bs4 import BeautifulSoup as bs
+from wand import image
+import os
 
 headers = {
     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36"
@@ -14,6 +16,9 @@ def miniface_downloader(url: str, isUpdate=False):
     all_pictures = []
     player_ids = []
     pictures_versions = []
+    cards_team = []
+    images_downloaded = []
+    written_teams= []
     r = requests.get(url, headers=headers)
     soup = bs(r.content, "html.parser")
 
@@ -33,7 +38,18 @@ def miniface_downloader(url: str, isUpdate=False):
         for cards in cards_div:
             pictures_div = cards.find_all("img")
             for pictures in pictures_div:
-                if pictures["data-src"].find("Variation2022") != -1:
+                if pictures["data-src"].find("teamlogos") != -1:
+                    cards_team.append(
+                        str(
+                            int(
+                                pictures["data-src"].split("/teamlogos/")[1]
+                                .split("/")[0]
+                                .replace(".png", "")
+                                .replace("e_", "")
+                            )
+                        )
+                    )
+                elif pictures["data-src"].find("Variation2022") != -1:
                     picture_url = "https://www.pesmaster.com" + pictures["data-src"]
                     picture_name = str(
                         picture_url.split("/Variation2022/")[1].split("/")[0]
@@ -54,10 +70,19 @@ def miniface_downloader(url: str, isUpdate=False):
                                 base=16,
                             )
                         )
+        del cards_team[0]
         if isUpdate:
             image_bytes = download_image([all_pictures[0]], [pictures_versions[0]])
         else:
-            image_bytes = download_image(all_pictures, pictures_versions)
+            for i in range(len(all_pictures)):
+                try:
+                    images_downloaded.append(
+                        download_image([all_pictures[i]], [pictures_versions[i]])
+                    )
+                    images_downloaded[i]["team"]=cards_team[i]
+                    images_downloaded[i]["id"]=player_ids[i]
+                except:
+                    print(f"{str(player_ids[i])} was not found")
         if len(all_pictures) != 0:
             if isUpdate:
                 image_name = str(
@@ -68,7 +93,21 @@ def miniface_downloader(url: str, isUpdate=False):
                 )
             else:
                 image_name = str(url.split("/player/")[1].split("/")[0])
-            open(image_name + ".png", "wb").write(image_bytes)
+            with open(f"{image_name}/map_teams.csv", "wt").write(image_bytes) as f:
+                for i in range(len(images_downloaded)):
+                    with open(f"{image_name}/map_ids.csv", "wt").write(image_bytes) as a:
+                        a.write()
+                    try:
+                        written_teams.index(images_downloaded[i]["team"])
+                    except:
+                        written_teams.append(images_downloaded[i]["team"])
+                        f.write(f"{str(images_downloaded[i]["team"])}\n")
+                    with image.Image(blob=images_downloaded[i]["bytes"]) as img:
+                        img.compression = "dxt3"
+                        dir = os.path.join(image_name,images_downloaded[i]["team"])
+                        if not os.path.exists(dir):
+                            os.makedirs(dir)
+                        img.save(filename=f"{image_name}/{images_downloaded[i]["team"]}/{str(images_downloaded[i]["id"])}.dds")
     except Exception as e:
         print(f"Skipped {url}: {e}")
 
@@ -81,7 +120,9 @@ def download_image(url_list: list, versions: list):
             image.status_code == 200
             and image.content.startswith(b"<!DOCTYPE html>") == False
         ):
-            return image.content
+            return {
+                "bytes": image.content,
+            }
         else:
             if "pesmaster" in url_list[index]:
                 url_list[index] = url_list[index].replace(
