@@ -33,12 +33,10 @@ jobs:
           python3 -m pip install -r requirements.txt
       - name: Run Script
         run: python3 script.py
-      - name: Create Livecpk Lines
-        run: python3 create_livecpk_lines.py
       - name: Create Archive
         run: python3 create_archive.py
       - name: Rename Archive
-        run: mv "$(ls -R | grep '\.zip$')" "AIO-$(ls -R | grep '\.zip$')"
+        run: mv "$(ls -R | grep '\.zip$')" "TEST-AIO-$(ls -R | grep '\.zip$')"
       - name: Set ENV
         run: echo "RELEASE_NAME=$(ls -R | grep '\.zip$')" >> $GITHUB_ENV
       - uses: xresloader/upload-to-github-release@main

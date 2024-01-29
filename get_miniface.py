@@ -1,3 +1,4 @@
+import enum
 import requests
 from bs4 import BeautifulSoup as bs
 from wand import image
@@ -8,19 +9,20 @@ headers = {
 }
 
 
-def reverse_hex(a):
-    return "".join(reversed([a[i : i + 2] for i in range(0, len(a), 2)]))
+def remove_indexes(l, indexes):
+    return [j for i, j in enumerate(l) if i not in indexes]
 
 
 def miniface_downloader(url: str, isUpdate=False):
     all_pictures = []
     player_ids = []
-    pictures_versions = []
     cards_team = []
     images_downloaded = []
-    written_teams= []
+    written_teams = []
+    default_cards_indexes = []
     r = requests.get(url, headers=headers)
     soup = bs(r.content, "html.parser")
+    image_name = str(url.split("/player/")[1].split("/")[0])
 
     cards_div = soup.find_all("div", attrs={"class": "player-card-container"})
 
@@ -35,54 +37,64 @@ def miniface_downloader(url: str, isUpdate=False):
                     0
                 ],
             )
-        for cards in cards_div:
+        for i, cards in enumerate(cards_div):
             pictures_div = cards.find_all("img")
             for pictures in pictures_div:
                 if pictures["data-src"].find("teamlogos") != -1:
                     cards_team.append(
                         str(
                             int(
-                                pictures["data-src"].split("/teamlogos/")[1]
+                                pictures["data-src"]
+                                .split("/teamlogos/")[1]
                                 .split("/")[0]
                                 .replace(".png", "")
                                 .replace("e_", "")
                             )
                         )
                     )
-                elif pictures["data-src"].find("Variation2022") != -1:
+                elif "graphics/players" in pictures["data-src"]:
                     picture_url = "https://www.pesmaster.com" + pictures["data-src"]
-                    picture_name = str(
-                        picture_url.split("/Variation2022/")[1].split("/")[0]
-                    )
+                    if "/Variation2022/" in pictures["data-src"]:
+                        picture_name = str(
+                            picture_url.split("/Variation2022/")[1].split("/")[0]
+                        )
+                    else:
+                        picture_name = str(
+                            picture_url.split("graphics/players/")[1].split("/")[0]
+                        )
+                        if not i in default_cards_indexes:
+                            default_cards_indexes.append(i)
                     if (
                         picture_name.find("b") == -1
                         and picture_name.find("dummy") == -1
                     ):
                         all_pictures.append(picture_url)
-                        player_ids.append(int(picture_name.replace("_.png", "")))
-                        pictures_versions.append(
-                            int(
-                                reverse_hex(
-                                    hex(int(picture_name.replace("_.png", "")))[:-6][
-                                        -4:
-                                    ],
-                                ),
-                                base=16,
-                            )
-                        )
-        del cards_team[0]
+                        player_ids.append(picture_name.replace("_.png", ""))
         if isUpdate:
-            image_bytes = download_image([all_pictures[0]], [pictures_versions[0]])
+            images_downloaded.append(
+                {
+                    "bytes": download_image(all_pictures[0]),
+                    "team": cards_team[0],
+                    "id": player_ids[0],
+                }
+            )
         else:
-            for i in range(len(all_pictures)):
+            player_ids = remove_indexes(player_ids, default_cards_indexes)
+            all_pictures = remove_indexes(all_pictures, default_cards_indexes)
+            cards_team = remove_indexes(cards_team, default_cards_indexes)
+
+            for i, pic in enumerate(all_pictures):
                 try:
-                    images_downloaded.append(
-                        download_image([all_pictures[i]], [pictures_versions[i]])
-                    )
-                    images_downloaded[i]["team"]=cards_team[i]
-                    images_downloaded[i]["id"]=player_ids[i]
-                except:
-                    print(f"{str(player_ids[i])} was not found")
+                    t = {}
+                    t["bytes"] = download_image(pic)
+                    t["id"] = player_ids[i]
+                    try:
+                        t["team"] = cards_team[i]
+                    except IndexError:
+                        t["team"] = cards_team[-1]
+                    images_downloaded.append(t)
+                except ValueError as e:
+                    print(f"Skipped {str(pic)}: {e}")
         if len(all_pictures) != 0:
             if isUpdate:
                 image_name = str(
@@ -91,47 +103,47 @@ def miniface_downloader(url: str, isUpdate=False):
                         base=16,
                     )
                 )
-            else:
-                image_name = str(url.split("/player/")[1].split("/")[0])
-            with open(f"{image_name}/map_teams.csv", "wt").write(image_bytes) as f:
-                for i in range(len(images_downloaded)):
-                    with open(f"{image_name}/map_ids.csv", "wt").write(image_bytes) as a:
-                        a.write()
+            if not os.path.exists(image_name):
+                os.makedirs(image_name)
+            teams_dir = os.path.join(image_name, "map_teams.csv")
+            with open(teams_dir, "a") as f:
+                for image_downloaded in images_downloaded:
+                    dir = os.path.join(image_name, image_downloaded["team"])
+                    if not os.path.exists(dir):
+                        os.makedirs(dir)
+                    ids_dir = os.path.join(
+                        image_name, image_downloaded["team"], "map_ids.csv"
+                    )
+                    with open(ids_dir, "a") as ff:
+                        ff.write(f"{image_downloaded['id']}\n")
                     try:
-                        written_teams.index(images_downloaded[i]["team"])
-                    except:
-                        written_teams.append(images_downloaded[i]["team"])
-                        f.write(f"{str(images_downloaded[i]["team"])}\n")
-                    with image.Image(blob=images_downloaded[i]["bytes"]) as img:
+                        written_teams.index(image_downloaded["team"])
+                    except ValueError as e:
+                        written_teams.append(image_downloaded["team"])
+                        f.write(f"{str(image_downloaded['team'])}\n")
+                    with image.Image(blob=image_downloaded["bytes"]) as img:
                         img.compression = "dxt3"
-                        dir = os.path.join(image_name,images_downloaded[i]["team"])
-                        if not os.path.exists(dir):
-                            os.makedirs(dir)
-                        img.save(filename=f"{image_name}/{images_downloaded[i]["team"]}/{str(images_downloaded[i]["id"])}.dds")
+                        fn = os.path.join(
+                            image_name,
+                            image_downloaded["team"],
+                            image_downloaded["id"] + ".dds",
+                        )
+                        img.save(filename=fn)
     except Exception as e:
         print(f"Skipped {url}: {e}")
 
 
-def download_image(url_list: list, versions: list):
-    if len(url_list) > 0:
-        index = versions.index(max(versions))
-        image = requests.get(url_list[index])
-        if (
-            image.status_code == 200
-            and image.content.startswith(b"<!DOCTYPE html>") == False
-        ):
-            return {
-                "bytes": image.content,
-            }
-        else:
-            if "pesmaster" in url_list[index]:
-                url_list[index] = url_list[index].replace(
+def download_image(url_list: str):
+    image = requests.get(url_list)
+    if image.status_code == 200 and not image.content.startswith(b"<!DOCTYPE html>"):
+        return image.content
+    else:
+        if "pesmaster" in url_list:
+            return download_image(
+                url_list.replace(
                     "https://www.pesmaster.com/efootball-2022/graphics/players/Variation2022/",
                     "https://efootballhub.net/images/efootball23/players/",
                 )
-            elif "efootballhub" in url_list[index]:
-                del url_list[index]
-                del versions[index]
-            return download_image(url_list, versions)
-    else:
-        raise ValueError
+            )
+        elif "efootballhub" in url_list:
+            raise ValueError

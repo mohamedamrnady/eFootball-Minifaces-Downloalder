@@ -1,8 +1,11 @@
-from get_miniface import *
-from teams import *
-from players_in_team import *
-from png_to_dds import *
+import os
+from get_miniface import miniface_downloader
+from teams import league_info_scrapper, teams_urls_scrapper
+from players_in_team import players_in_team
 
+if not os.path.exists("temp"):
+    os.makedirs("temp")
+os.chdir("temp")
 print("Loading Info...")
 
 leagues_urls = league_info_scrapper(
@@ -34,10 +37,9 @@ for counter, league_url in enumerate(leagues_urls):
             for player_url in players_urls:
                 try:
                     done_players.index(player_url)
-                except:
+                except ValueError as e:
                     miniface_downloader(player_url)
                     done_players.append(player_url)
-        sort_all_images("")
     else:
         national_names.append(leagues_names[counter])
         national_urls.append(league_url)
@@ -57,7 +59,6 @@ for counter, national_url in enumerate(national_urls):
         for player_url in players_urls:
             try:
                 done_players.index(player_url)
-            except:
+            except ValueError as e:
                 miniface_downloader(player_url)
                 done_players.append(player_url)
-    sort_all_images("")
