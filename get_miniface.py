@@ -49,6 +49,7 @@ def miniface_downloader(url: str, isUpdate=False):
                                 .split("/")[0]
                                 .replace(".png", "")
                                 .replace("e_", "")
+                                .replace("_w", "")
                             )
                         )
                     )
