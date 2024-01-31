@@ -30,10 +30,14 @@ def miniface_downloader(url: str, isUpdate=False):
                 ],
             )
         for i, cards in enumerate(cards_div):
-            images_downloaded.append({})
+            images_downloaded.append(
+                {
+                    "team": "",
+                }
+            )
             pictures_div = cards.find_all("img")
             for pictures in pictures_div:
-                if pictures["data-src"].find("teamlogos") != -1:
+                if "teamlogos" in pictures["data-src"]:
                     images_downloaded[i]["team"] = str(
                         int(
                             pictures["data-src"]
@@ -57,14 +61,11 @@ def miniface_downloader(url: str, isUpdate=False):
                         )
                         images_downloaded[i]["default"] = True
                     if not "b" in picture_name and not "dummy" in picture_name:
-                        images_downloaded[i]["url"] = picture_url
+                        if not images_downloaded[i]["default"]:
+                            images_downloaded[i]["bytes"] = download_image(picture_url)
+                        else:
+                            images_downloaded[i]["bytes"] = False
                         images_downloaded[i]["id"] = picture_name.replace("_.png", "")
-
-        for i, pic in enumerate(images_downloaded):
-            if not pic["default"]:
-                images_downloaded[i]["bytes"] = download_image(pic["url"])
-            else:
-                images_downloaded[i]["bytes"] = False
 
         if len(images_downloaded) != 0:
             if isUpdate:
