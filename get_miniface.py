@@ -10,10 +10,21 @@ headers = {
 
 def miniface_downloader(url: str, isUpdate=False):
     images_downloaded = []
-    written_teams = []
+    image_name = str(url.split("/player/")[1].split("/")[0])
+    teams_dir = os.path.join(image_name, "map_teams.csv")
+    if isUpdate:
+        image_name = str(
+            int(
+                hex(int(image_name))[-6:],
+                base=16,
+            )
+        )
+        teams_dir = os.path.join(image_name, "map_teams.csv")
+        written_teams = open(teams_dir).readlines()
+    else:
+        written_teams = []
     r = requests.get(url, headers=headers)
     soup = bs(r.content, "html.parser")
-    image_name = str(url.split("/player/")[1].split("/")[0])
 
     cards_div = soup.find_all("div", attrs={"class": "player-card-container"})
 
@@ -22,12 +33,12 @@ def miniface_downloader(url: str, isUpdate=False):
             "figure", attrs={"class": "player-card efootball-2022"}
         )
         if isUpdate:
-            cards_div.insert(
-                0,
+            cards_div = [
                 soup.find_all("figure", attrs={"class": "player-card efootball-2022"})[
                     0
-                ],
-            )
+                ]
+            ]
+
         for i, cards in enumerate(cards_div):
             images_downloaded.append(
                 {
@@ -67,16 +78,8 @@ def miniface_downloader(url: str, isUpdate=False):
                         images_downloaded[i]["id"] = picture_name.replace("_.png", "")
 
         if len(images_downloaded) != 0:
-            if isUpdate:
-                image_name = str(
-                    int(
-                        hex(images_downloaded[0]["id"])[-6:],
-                        base=16,
-                    )
-                )
             if not os.path.exists(image_name):
                 os.makedirs(image_name)
-            teams_dir = os.path.join(image_name, "map_teams.csv")
             with open(teams_dir, "a") as f:
                 for image_downloaded in images_downloaded:
                     if image_downloaded["bytes"]:

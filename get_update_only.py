@@ -1,10 +1,7 @@
-from get_miniface import *
-from teams import *
-from png_to_dds import *
 import requests
+from get_miniface import miniface_downloader
+from teams import players_in_update
 
 url = requests.get("https://www.pesmaster.com/efootball-2022/player/featured/").url
 for player_url in players_in_update(url):
     miniface_downloader(player_url, True)
-    png_to_dds()
-    sort_all_images(url.split("date=")[1])
