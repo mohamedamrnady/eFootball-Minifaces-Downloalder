@@ -3,9 +3,9 @@ from get_miniface import miniface_downloader
 from teams import league_info_scrapper, teams_urls_scrapper
 from players_in_team import players_in_team
 
-if not os.path.exists("temp"):
-    os.makedirs("temp")
-os.chdir("temp")
+if not os.path.exists("Miniface Server\\content\\miniface-server"):
+    os.makedirs("Miniface Server\\content\\miniface-server")
+os.chdir("Miniface Server\\content\\miniface-server")
 print("Loading Info...")
 
 leagues_urls = league_info_scrapper(
@@ -35,9 +35,7 @@ for counter, league_url in enumerate(leagues_urls):
         for team_url in teams_urls:
             players_urls = players_in_team(team_url)
             for player_url in players_urls:
-                try:
-                    done_players.index(player_url)
-                except ValueError as e:
+                if not player_url in done_players:
                     miniface_downloader(player_url)
                     done_players.append(player_url)
     else:
@@ -57,8 +55,6 @@ for counter, national_url in enumerate(national_urls):
     for team_url in teams_urls:
         players_urls = players_in_team(team_url)
         for player_url in players_urls:
-            try:
-                done_players.index(player_url)
-            except ValueError as e:
+            if not player_url in done_players:
                 miniface_downloader(player_url)
                 done_players.append(player_url)
