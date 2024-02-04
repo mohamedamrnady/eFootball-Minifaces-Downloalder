@@ -20,7 +20,10 @@ def miniface_downloader(url: str, isUpdate=False):
             )
         )
         teams_dir = os.path.join(image_name, "map_teams.csv")
-        written_teams = open(teams_dir).readlines()
+        try:
+            written_teams = open(teams_dir).readlines()
+        except FileNotFoundError:
+            written_teams = []
     else:
         written_teams = []
     r = requests.get(url, headers=headers)
