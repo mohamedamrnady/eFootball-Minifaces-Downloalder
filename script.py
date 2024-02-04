@@ -3,9 +3,9 @@ from get_miniface import miniface_downloader
 from teams import league_info_scrapper, teams_urls_scrapper
 from players_in_team import players_in_team
 
-if not os.path.exists("Miniface Server\\content\\miniface-server"):
-    os.makedirs("Miniface Server\\content\\miniface-server")
-os.chdir("Miniface Server\\content\\miniface-server")
+if not os.path.exists("MinifaceServer\\content\\miniface-server"):
+    os.makedirs("MinifaceServer\\content\\miniface-server")
+os.chdir("MinifaceServer\\content\\miniface-server")
 print("Loading Info...")
 
 leagues_urls = league_info_scrapper(

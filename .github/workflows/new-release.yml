@@ -16,7 +16,7 @@ jobs:
         run: |
           python3 -m pip install -r requirements.txt
       - name: Delete old content
-        run: rm -r ".\Miniface Server\content\miniface-server"
+        run: rm -r .\MinifaceServer\content\miniface-server
       - name: Run Script
         run: python3 script.py
       - name: Commit Changes
