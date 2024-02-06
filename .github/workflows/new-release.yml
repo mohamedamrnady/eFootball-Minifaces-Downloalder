@@ -20,11 +20,11 @@ jobs:
       - name: Run Script
         run: python3 script.py
       - name: Create Archive
-        run: rar a -r "MiniFaceServer-$(date +'%m/%d/%Y').rar" MinifaceServer
+        run: rar a -r "MiniFaceServer-$(date +'%m-%d-%Y').rar" MinifaceServer
       - name: Set ENV
         run: |
-          echo "RELEASE_NAME=MiniFaceServer-$(date +'%m/%d/%Y')" >> $GITHUB_ENV
-          echo "NEXT_VER_CODE=$(date +'%m/%d/%Y')" >> $GITHUB_OUTPUT
+          echo "RELEASE_NAME=MiniFaceServer-$(date +'%m-%d-%Y')" >> $GITHUB_ENV
+          echo "NEXT_VER_CODE=$(date +'%m-%d-%Y')" >> $GITHUB_OUTPUT
       - uses: xresloader/upload-to-github-release@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
