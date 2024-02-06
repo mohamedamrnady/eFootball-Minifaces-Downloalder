@@ -10,17 +10,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
+      - name: Get last tag
+        id: last_tag
+        uses: oprypin/find-latest-tag@v1
+        continue-on-error: true
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          releases-only: true
+      - name: Get next version code
+        id: next_ver_code
+        run: |
+          TAG="${{ steps.last_tag.outputs.tag }}"
+          if [ -z "$TAG" ]; then TAG=0; fi
+          echo "NEXT_VER_CODE=$((TAG + 1))" >> $GITHUB_OUTPUT
       - name: Setup Environment
         run: |
           sudo apt-get update
           sudo apt-get install python3-pip
       - name: Install Requirements
-        run: python3 -m pip install -r requirements.txt
+        run: |
+          python3 -m pip install -r requirements.txt
       - name: Run Script
         run: python3 get_update_only.py
-      - name: Commit Changes
-        uses: stefanzweifel/git-auto-commit-action@master
+      - name: Create Livecpk Lines
+        run: python3 create_livecpk_lines.py
+      - name: Create Archive
+        run: python3 create_archive.py
+      - name: Set ENV
+        run: echo "RELEASE_NAME=$(ls -R | grep '\.zip$')" >> $GITHUB_ENV
+      - uses: xresloader/upload-to-github-release@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          push_options: "--force"
-          skip_checkout: true
-          commit_message: New Update
+          file: "*.zip"
+          draft: false
+          tags: true
+          tag_name: ${{ steps.next_ver_code.outputs.NEXT_VER_CODE }}
+          default_release_name: "${{ env.RELEASE_NAME }}"
