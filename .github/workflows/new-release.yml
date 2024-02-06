@@ -32,5 +32,5 @@ jobs:
           file: "*.rar"
           draft: false
           tags: true
-          tag_name: ${{ steps.next_ver_code.outputs.NEXT_VER_CODE }}
+          tag_name: "${{ steps.next_ver_code.outputs.NEXT_VER_CODE }}"
           default_release_name: "${{ env.RELEASE_NAME }}"
