@@ -94,9 +94,7 @@ def miniface_downloader(url: str, isUpdate=False):
                         )
                         with open(ids_dir, "a") as ff:
                             ff.write(f"{image_downloaded['id']}\n")
-                        try:
-                            written_teams.index(image_downloaded["team"])
-                        except ValueError as e:
+                        if not image_downloaded["team"] in written_teams:
                             written_teams.append(image_downloaded["team"])
                             f.write(f"{str(image_downloaded['team'])}\n")
                         with image.Image(blob=image_downloaded["bytes"]) as img:
