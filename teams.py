@@ -59,7 +59,7 @@ def league_info_scrapper(url, needed, pes_version):
                     team_url = "https://www.pesmaster.com/" + team_id
                     league_urls.append(team_url)
                 if needed == "id":
-                    team_id = str(team_id).split("/league/")[1].split("/")[0]
+                    team_id = str(team_id).split("/league/")[-1].split("/")[0]
                     league_ids.append(team_id)
     if needed == "url":
         return league_urls

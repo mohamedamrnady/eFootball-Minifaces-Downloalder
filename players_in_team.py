@@ -22,7 +22,7 @@ def players_in_team(url):
                     )
                     real_player_id = str(
                         int(
-                            hex(int(original_link[1].replace("/", "")))[-5:],
+                            hex(int(original_link[-1].replace("/", "")))[-5:],
                             base=16,
                         )
                     )

@@ -10,7 +10,7 @@ headers = {
 
 def miniface_downloader(url: str, isUpdate=False):
     images_downloaded = []
-    image_name = str(url.split("/player/")[1].split("/")[0])
+    image_name = str(url.split("/player/")[-1].split("/")[0])
     teams_dir = os.path.join(image_name, "map_teams.csv")
     if isUpdate:
         image_name = str(
@@ -65,12 +65,12 @@ def miniface_downloader(url: str, isUpdate=False):
                     picture_url = "https://www.pesmaster.com" + pictures["data-src"]
                     if "/Variation2022/" in pictures["data-src"]:
                         picture_name = str(
-                            picture_url.split("/Variation2022/")[1].split("/")[0]
+                            picture_url.split("/Variation2022/")[-1].split("/")[0]
                         )
                         images_downloaded[i]["default"] = False
                     else:
                         picture_name = str(
-                            picture_url.split("graphics/players/")[1].split("/")[0]
+                            picture_url.split("graphics/players/")[-1].split("/")[0]
                         )
                         images_downloaded[i]["default"] = True
                     if not "b" in picture_name and not "dummy" in picture_name:
