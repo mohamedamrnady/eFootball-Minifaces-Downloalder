@@ -6,6 +6,7 @@ from wand import image
 headers = {
     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36"
 }
+downloaded_events = {"names": [], "bytes": []}
 
 
 def miniface_downloader(url: str, isUpdate=False):
@@ -79,6 +80,10 @@ def miniface_downloader(url: str, isUpdate=False):
                         else:
                             images_downloaded[i]["bytes"] = False
                         images_downloaded[i]["id"] = picture_name.replace("_.png", "")
+                    elif "_b02" in picture_name:
+                        images_downloaded[i]["background_bytes"] = get_card_event(
+                            picture_name, picture_url
+                        )
 
         if len(images_downloaded) != 0:
             if not os.path.exists(image_name):
@@ -97,14 +102,22 @@ def miniface_downloader(url: str, isUpdate=False):
                         if not image_downloaded["team"] in written_teams:
                             written_teams.append(image_downloaded["team"])
                             f.write(f"{str(image_downloaded['team'])}\n")
-                        with image.Image(blob=image_downloaded["bytes"]) as img:
-                            img.compression = "dxt3"
-                            fn = os.path.join(
-                                image_name,
-                                image_downloaded["team"],
-                                image_downloaded["id"] + ".dds",
-                            )
-                            img.save(filename=fn)
+                        fn = os.path.join(
+                            image_name,
+                            image_downloaded["team"],
+                            image_downloaded["id"] + ".dds",
+                        )
+                        back_img = image.Image(
+                            blob=image_downloaded["background_bytes"],
+                        )
+                        fore_img = image.Image(
+                            blob=image_downloaded["bytes"],
+                        )
+                        back_img.trim(percent_background=0.5)
+                        back_img.resize(fore_img.width, fore_img.height)
+                        back_img.composite(fore_img)
+                        back_img.compression = "dxt5"
+                        back_img.save(filename=fn)
     except Exception as e:
         print(f"Skipped {url} : {e}")
 
@@ -121,6 +134,23 @@ def download_image(url: str):
                     "https://efootballhub.net/images/efootball23/players/",
                 )
             )
-        elif "efootballhub" in url:
+        elif "efootball23" in url:
+            return download_image(
+                url.replace(
+                    "efootball23",
+                    "efootball24",
+                )
+            )
+        elif "efootball24" in url:
             print(f"Skipped {url}")
             return False
+
+
+def get_card_event(event_name, event_url):
+    if event_name in downloaded_events["names"]:
+        return downloaded_events["bytes"][downloaded_events["names"].index(event_name)]
+    else:
+        downloaded_events["names"].append(event_name)
+        b = download_image(event_url)
+        downloaded_events["bytes"].append(b)
+        return b
