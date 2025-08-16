@@ -13,7 +13,6 @@ headers = {
 }
 
 url = requests.get("https://www.pesmaster.com/efootball-2022/player/featured/").url
-url = "https://www.pesmaster.com/efootball-2022/player/featured/?date=2025-08-07"
 
 r = requests.get(url, headers=headers)
 soup = bs(r.content, "html.parser")
