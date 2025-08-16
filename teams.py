@@ -65,16 +65,3 @@ def league_info_scrapper(url, needed, pes_version):
         return league_urls
     if needed == "id":
         return league_ids
-
-
-def players_in_update(url):
-    all_players = []
-    r = requests.get(url, headers=headers)
-    soup = bs(r.content, "html.parser")
-    players_div = soup.find_all("div", attrs={"class": "player-card-container"})
-    for players in players_div:
-        players_url = players.find_all("a")
-        for player_url in players_url:
-            player_url = player_url.get_attribute_list("href")[0]
-            all_players.append("https://www.pesmaster.com" + player_url)
-    return all_players

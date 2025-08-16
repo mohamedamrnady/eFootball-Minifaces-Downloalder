@@ -1,48 +1,36 @@
 name: New Update
 
 on:
+  schedule:
+    - cron: "0 0 * * 4"
   workflow_dispatch:
 
 jobs:
-  Update:
+  Release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-      - name: Get last tag
-        id: last_tag
-        uses: oprypin/find-latest-tag@v1
-        continue-on-error: true
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
-          releases-only: true
-      - name: Get next version code
-        id: next_ver_code
-        run: |
-          TAG="${{ steps.last_tag.outputs.tag }}"
-          if [ -z "$TAG" ]; then TAG=0; fi
-          echo "NEXT_VER_CODE=$((TAG + 1))" >> $GITHUB_OUTPUT
       - name: Setup Environment
         run: |
           sudo apt-get update
-          sudo apt-get install python3-pip
+          sudo apt-get install python3-pip rar
       - name: Install Requirements
         run: |
           python3 -m pip install -r requirements.txt
       - name: Run Script
         run: python3 get_update_only.py
-      - name: Create Livecpk Lines
-        run: python3 create_livecpk_lines.py
       - name: Create Archive
-        run: python3 create_archive.py
+        run: rar a -r "MiniFaceServer-$(date +'%m-%d-%Y')-Update.rar" MinifaceServer
       - name: Set ENV
-        run: echo "RELEASE_NAME=$(ls -R | grep '\.zip$')" >> $GITHUB_ENV
+        run: |
+          echo "RELEASE_NAME=MiniFaceServer-$(date +'%m-%d-%Y')" >> $GITHUB_ENV
+          echo "NEXT_VER_CODE=$(date +'%m%d%Y')" >> $GITHUB_ENV
       - uses: xresloader/upload-to-github-release@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          file: "*.zip"
+          file: "*.rar"
           draft: false
           tags: true
-          tag_name: ${{ steps.next_ver_code.outputs.NEXT_VER_CODE }}
+          tag_name: "${{ env.NEXT_VER_CODE }}"
           default_release_name: "${{ env.RELEASE_NAME }}"
