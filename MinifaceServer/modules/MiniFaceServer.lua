@@ -88,7 +88,6 @@ local function init(ctx)
 	if fileroot:sub(1, 1) == "." then
 		fileroot = ctx.sider_dir .. fileroot
 	end
-	ctx.register("set_teams", set_teams)
 	ctx.register("livecpk_make_key", make_key)
 	ctx.register("livecpk_get_filepath", get_filepath)
 end
