@@ -13,31 +13,31 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
 def test_imports():
-    """Test that all optimized modules can be imported"""
+    """Test that all modules can be imported"""
     print("🔍 Testing imports...")
 
     try:
-        from teams_optimized import league_info_scrapper, teams_urls_scrapper
+        from teams import league_info_scrapper, teams_urls_scrapper
 
-        print("  ✅ teams_optimized imported successfully")
+        print("  ✅ teams imported successfully")
     except Exception as e:
-        print(f"  ❌ teams_optimized import failed: {e}")
+        print(f"  ❌ teams import failed: {e}")
         return False
 
     try:
-        from players_in_team_optimized import players_in_team
+        from players_in_team import players_in_team
 
-        print("  ✅ players_in_team_optimized imported successfully")
+        print("  ✅ players_in_team imported successfully")
     except Exception as e:
-        print(f"  ❌ players_in_team_optimized import failed: {e}")
+        print(f"  ❌ players_in_team import failed: {e}")
         return False
 
     try:
-        from get_miniface_optimized import miniface_downloader, download_image
+        from get_miniface import miniface_downloader, download_image
 
-        print("  ✅ get_miniface_optimized imported successfully")
+        print("  ✅ get_miniface imported successfully")
     except Exception as e:
-        print(f"  ❌ get_miniface_optimized import failed: {e}")
+        print(f"  ❌ get_miniface import failed: {e}")
         return False
 
     try:
@@ -58,7 +58,7 @@ def test_scraping():
     print("\n🌐 Testing web scraping...")
 
     try:
-        from teams_optimized import league_info_scrapper
+        from teams import league_info_scrapper
 
         print("  Testing league info scrapping...")
         start_time = time.time()

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Quick verification that the optimized modules work"""
+"""Quick verification that the modules work"""
 
-print("Testing optimized modules...")
+print("Testing modules...")
 
 try:
-    print("✅ Importing optimized modules...")
-    from teams_optimized import league_info_scrapper, teams_urls_scrapper
-    from players_in_team_optimized import players_in_team
-    from get_miniface_optimized import miniface_downloader
+    print("✅ Importing modules...")
+    from teams import league_info_scrapper, teams_urls_scrapper
+    from players_in_team import players_in_team
+    from get_miniface import miniface_downloader
     import config
 
     print("✅ All imports successful!")
@@ -17,14 +17,14 @@ try:
     print(f"   - Players workers: {config.MAX_WORKERS_PLAYERS}")
     print(f"   - Request delay: {config.REQUEST_DELAY}s")
 
-    print("✅ Ready to run optimized script!")
+    print("✅ Ready to run script!")
 
 except ImportError as e:
     print(f"❌ Import error: {e}")
 except Exception as e:
     print(f"❌ Error: {e}")
 
-print("\n🚀 To run the optimized version:")
-print("   python script_optimized.py")
+print("\n🚀 To run the script:")
+print("   python script.py")
 print("\n📊 To compare performance:")
 print("   python benchmark.py")

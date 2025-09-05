@@ -54,7 +54,7 @@ jobs:
           echo "Trigger: ${{ github.event_name }}"
           
           # Build command with appropriate options
-          SCRIPT_CMD="python script_optimized.py"
+          SCRIPT_CMD="python script.py"
           
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "Manual trigger detected"
