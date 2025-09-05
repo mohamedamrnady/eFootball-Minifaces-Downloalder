@@ -33,12 +33,7 @@ single-thread version can be found in the "single-threaded" branch "discountinue
 pip install -r requirements.txt
 ```
 
-### 2. Run Optimized Version
-```bash
-python script_optimized.py
-```
-
-### 3. Run Original Version (for comparison)
+### 2. Run Script
 ```bash
 python script.py
 ```
