@@ -2,35 +2,197 @@ name: New Release
 
 on:
   schedule:
-    - cron: "0 0 * * 4"
-  workflow_dispatch:
+    - cron: "0 0 * * 4"  # Weekly on Thursday at midnight UTC
+  workflow_dispatch:  # Allow manual triggering
+    inputs:
+      debug_mode:
+        description: 'Enable debug logging'
+        required: false
+        default: 'true'
+        type: boolean
+      worker_override:
+        description: 'Override worker counts (format: teams,players e.g., "2,4")'
+        required: false
+        default: ''
+        type: string
+      delay_override:
+        description: 'Override request delay in seconds'
+        required: false
+        default: ''
+        type: string
+
+env:
+  PYTHON_VERSION: "3.13.5"  # Use a stable Python version
 
 jobs:
   Release:
     runs-on: ubuntu-latest
+    timeout-minutes: 180  # 3 hour timeout for long-running downloads
+    
     steps:
-      - uses: actions/checkout@master
-      - name: Setup Environment
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'  # Cache pip dependencies
+          
+      - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install python3-pip rar
-      - name: Install Requirements
+          sudo apt-get install -y rar imagemagick libmagickwand-dev
+          
+      - name: Install Python dependencies
         run: |
-          python3 -m pip install -r requirements.txt
-      - name: Run Script
-        run: python3 script.py
-      - name: Create Archive
-        run: rar a -r "MiniFaceServer-$(date +'%m-%d-%Y').rar" MinifaceServer
-      - name: Set ENV
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Run optimized script
+        run: |
+          echo "Starting eFootball miniface download..."
+          echo "Trigger: ${{ github.event_name }}"
+          
+          # Build command with appropriate options
+          SCRIPT_CMD="python script_optimized.py"
+          
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual trigger detected"
+            
+            # Check debug mode input (defaults to true for manual runs)
+            if [ "${{ inputs.debug_mode }}" = "true" ]; then
+              echo "Debug logging enabled"
+              SCRIPT_CMD="$SCRIPT_CMD --debug"
+            else
+              echo "Debug logging disabled by user input"
+              SCRIPT_CMD="$SCRIPT_CMD --quiet"
+            fi
+            
+            # Apply worker overrides if provided
+            if [ -n "${{ inputs.worker_override }}" ]; then
+              IFS=',' read -r teams players <<< "${{ inputs.worker_override }}"
+              if [[ "$teams" =~ ^[0-9]+$ ]] && [[ "$players" =~ ^[0-9]+$ ]]; then
+                echo "Overriding workers: $teams teams, $players players"
+                SCRIPT_CMD="$SCRIPT_CMD --workers-teams $teams --workers-players $players"
+              else
+                echo "Invalid worker override format, using defaults"
+              fi
+            fi
+            
+            # Apply delay override if provided
+            if [ -n "${{ inputs.delay_override }}" ]; then
+              if [[ "${{ inputs.delay_override }}" =~ ^[0-9]*\.?[0-9]+$ ]]; then
+                echo "Overriding request delay: ${{ inputs.delay_override }}s"
+                SCRIPT_CMD="$SCRIPT_CMD --delay ${{ inputs.delay_override }}"
+              else
+                echo "Invalid delay override format, using default"
+              fi
+            fi
+            
+          else
+            echo "Scheduled trigger detected - running in optimized quiet mode"
+            SCRIPT_CMD="$SCRIPT_CMD --quiet"
+          fi
+          
+          echo "Executing: $SCRIPT_CMD"
+          eval $SCRIPT_CMD
+          echo "Download completed successfully!"
+          
+      - name: Verify output
+        run: |
+          echo "Verifying download results..."
+          
+          if [ ! -d "MinifaceServer" ]; then
+            echo "❌ Error: MinifaceServer directory not found"
+            exit 1
+          fi
+          
+          total_files=$(find MinifaceServer -name "*.dds" | wc -l)
+          total_players=$(find MinifaceServer -maxdepth 1 -type d -name "[0-9]*" | wc -l)
+          
+          echo "📊 Download Statistics:"
+          echo "  - Total miniface files: $total_files"
+          echo "  - Total players: $total_players"
+          
+          if [ $total_files -eq 0 ]; then
+            echo "❌ Warning: No miniface files were generated"
+            exit 1
+          fi
+          
+          # Show detailed info for manual triggers
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.debug_mode }}" = "true" ]; then
+            echo ""
+            echo "🔍 Debug Information:"
+            echo "  - Directory structure:"
+            du -sh MinifaceServer/* | head -10
+            echo "  - Sample player directories:"
+            ls MinifaceServer/ | grep -E '^[0-9]+$' | head -5
+            echo "  - Recent files:"
+            find MinifaceServer -name "*.dds" -newer MinifaceServer -print | head -5
+          fi
+          
+          echo "✅ Verification completed successfully"
+          
+      - name: Create optimized archive
+        run: |
+          echo "Creating archive..."
+          # Use better compression and exclude unnecessary files
+          rar a -r -m5 -ep1 "MiniFaceServer-$(date +'%m-%d-%Y').rar" MinifaceServer \
+            -x*.tmp -x*.log -x__pycache__ -x*.pyc
+          
+          # Get archive size for logging
+          archive_size=$(du -h "MiniFaceServer-$(date +'%m-%d-%Y').rar" | cut -f1)
+          echo "Archive created successfully: $archive_size"
+          
+      - name: Set release variables
         run: |
           echo "RELEASE_NAME=MiniFaceServer-$(date +'%m-%d-%Y')" >> $GITHUB_ENV
           echo "NEXT_VER_CODE=$(date +'%m%d%Y')" >> $GITHUB_ENV
-      - uses: xresloader/upload-to-github-release@main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "RELEASE_DATE=$(date +'%B %d, %Y')" >> $GITHUB_ENV
+          
+          # Set trigger type for release notes
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "TRIGGER_TYPE=Manual" >> $GITHUB_ENV
+            echo "TRIGGER_DETAILS=Manually triggered release" >> $GITHUB_ENV
+          else
+            echo "TRIGGER_TYPE=Scheduled" >> $GITHUB_ENV
+            echo "TRIGGER_DETAILS=Automatically triggered on schedule" >> $GITHUB_ENV
+          fi
+          
+      - name: Create release
+        uses: ncipollo/release-action@v1
         with:
-          file: "*.rar"
+          artifacts: "*.rar"
+          tag: ${{ env.NEXT_VER_CODE }}
+          name: ${{ env.RELEASE_NAME }}
+          body: |
+            # eFootball Minifaces Release - ${{ env.RELEASE_DATE }}
+            
+            **Release Type:** ${{ env.TRIGGER_TYPE }}  
+            **Generated:** ${{ env.TRIGGER_DETAILS }}
+            
+            Automated release containing the latest minifaces for eFootball.
+            
+            ## What's Included
+            - All available player minifaces in DDS format
+            - Organized by player ID and team
+            - Compatible with eFootball mods and tools
+            
+            ## Installation
+            1. Download the `${{ env.RELEASE_NAME }}.rar` file
+            2. Extract to your eFootball mods directory
+            3. Follow your mod manager's instructions
+            
+            ## Technical Details
+            - Generated using optimized multithreaded downloader
+            - Source: PESMaster database
+            - Format: DDS (DirectDraw Surface)
+            - Release Date: ${{ env.RELEASE_DATE }}
+            - Trigger: ${{ env.TRIGGER_TYPE }}
+            
+            ---
+            *This release was generated by GitHub Actions using the optimized script*
           draft: false
-          tags: true
-          tag_name: "${{ env.NEXT_VER_CODE }}"
-          default_release_name: "${{ env.RELEASE_NAME }}"
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}

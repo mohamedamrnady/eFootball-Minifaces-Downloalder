@@ -100,7 +100,7 @@ def download_image(url: str):
                 )
             )
         elif "efootball24" in url:
-            print(f"Skipped {url}")
+            print(f"Skipped image {url}")
             return False
 
 

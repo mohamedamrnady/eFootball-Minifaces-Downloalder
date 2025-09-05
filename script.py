@@ -50,8 +50,8 @@ for counter, league_url in enumerate(leagues_urls):
                         "figure", attrs={"class": "player-card efootball-2022"}
                     )
                 except IndexError as e:
-                    print(f"Skipped {player_url} : {e}")
+                    print(f"Skipped player {player_url} : {e}")
                     continue
-                for i, card in enumerate(cards_div):
+                for card in cards_div:
                     miniface_downloader(card, player_id)
                     done_players.append(player_id)
