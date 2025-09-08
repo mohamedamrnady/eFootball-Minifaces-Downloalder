@@ -30,7 +30,7 @@ def log_debug(message):
         print(f"[DEBUG] {message}")
 
 
-def miniface_downloader(card, player_id=False):
+def miniface_downloader(card, player_id=None):
     """
     Thread-safe version of miniface downloader with concurrent image processing
     """
@@ -172,11 +172,11 @@ def download_image(url: str, fallback_attempted=False):
                     elif "efootball23" in url:
                         fallback_url = url.replace("efootball23", "efootball24")
                         return download_image(fallback_url, fallback_attempted=True)
-                
+
                 # No valid fallback or fallback already attempted
                 log_debug(f"Image not found (HTTP {r.status_code}): {url}")
                 return False
-                
+
         except requests.RequestException as e:
             if attempt < max_retries - 1:
                 log_debug(f"Retry {attempt + 1}/{max_retries} for {url}: {e}")
