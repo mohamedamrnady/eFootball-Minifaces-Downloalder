@@ -297,7 +297,6 @@ def main():
         with skipped_players_lock:
             for card in all_cards:
                 player_id = extract_player_id_from_card(card)
-                print(player_id)
                 if player_id and player_id not in skipped_players:
                     filtered_cards.append(card)
 
