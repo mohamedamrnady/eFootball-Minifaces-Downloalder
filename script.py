@@ -56,7 +56,9 @@ def load_skipped_players():
     try:
         with open(SKIPPED_FILE, "r") as f:
             skipped_players = set(line.strip() for line in f if line.strip())
-        debug_print(f"Loaded {len(skipped_players)} skipped players from {SKIPPED_FILE}")
+        debug_print(
+            f"Loaded {len(skipped_players)} skipped players from {SKIPPED_FILE}"
+        )
     except Exception as e:
         log_error(f"Failed to load {SKIPPED_FILE}: {e}")
         skipped_players = set()
@@ -264,9 +266,6 @@ def process_player(player_url, team_name, league_name):
         for card in cards_div:
             miniface_downloader(card, player_id)
 
-        # Persist success to skip list to avoid future page fetches
-        append_skipped_player(player_id)
-
         log_success(f"Processed player {player_id} from {team_name}")
         return f"✓ Processed player {player_id} from {team_name}"
 
@@ -300,12 +299,15 @@ def process_team(team_url, team_counter, total_teams, league_name):
         # Filter out players in the persistent skip list before scheduling requests
         with skipped_players_lock:
             filtered_players = [
-                url for url in players_urls
+                url
+                for url in players_urls
                 if str(url.split("/player/")[-1].split("/")[0]) not in skipped_players
             ]
         skipped_count = len(players_urls) - len(filtered_players)
         if skipped_count > 0:
-            debug_print(f"Skipping {skipped_count} players from skip list in team {team_counter}")
+            debug_print(
+                f"Skipping {skipped_count} players from skip list in team {team_counter}"
+            )
 
         # Process players in this team concurrently
         with ThreadPoolExecutor(max_workers=MAX_WORKERS_PLAYERS) as executor:
