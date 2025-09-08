@@ -145,7 +145,7 @@ def miniface_downloader(card, player_id=False):
                 log_error(f"Error processing image for player {player_id}: {e}")
 
 
-def download_image(url: str):
+def download_image(url: str, fallback_attempted=False):
     """
     Download image with retry logic and proper error handling
     """
@@ -161,23 +161,22 @@ def download_image(url: str):
             if r.status_code == 200 and not r.content.startswith(b"<!DOCTYPE html>"):
                 return r.content
             else:
-                if "pesmaster" in url:
-                    return download_image(
-                        url.replace(
+                # Only try fallbacks once to prevent infinite recursion
+                if not fallback_attempted:
+                    if "pesmaster" in url and "Variation2022" in url:
+                        fallback_url = url.replace(
                             "https://www.pesmaster.com/efootball-2022/graphics/players/Variation2022/",
                             "https://efootballhub.net/images/efootball23/players/",
                         )
-                    )
-                elif "efootball23" in url:
-                    return download_image(
-                        url.replace(
-                            "efootball23",
-                            "efootball24",
-                        )
-                    )
-                elif "efootball24" in url:
-                    log_debug(f"Skipped image {url}")
-                    return False
+                        return download_image(fallback_url, fallback_attempted=True)
+                    elif "efootball23" in url:
+                        fallback_url = url.replace("efootball23", "efootball24")
+                        return download_image(fallback_url, fallback_attempted=True)
+                
+                # No valid fallback or fallback already attempted
+                log_debug(f"Image not found (HTTP {r.status_code}): {url}")
+                return False
+                
         except requests.RequestException as e:
             if attempt < max_retries - 1:
                 log_debug(f"Retry {attempt + 1}/{max_retries} for {url}: {e}")
