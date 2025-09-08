@@ -2,35 +2,219 @@ name: New Update
 
 on:
   schedule:
-    - cron: "0 0 * * 4"
-  workflow_dispatch:
+    - cron: "0 6 * * 4"  # Weekly on Thursday at 6 AM UTC (6 hours after new-release)
+  workflow_dispatch:  # Allow manual triggering
+    inputs:
+      debug_mode:
+        description: 'Enable debug logging'
+        required: false
+        default: 'true'
+        type: boolean
+      worker_override:
+        description: 'Override worker count (e.g., "8")'
+        required: false
+        default: ''
+        type: string
+      delay_override:
+        description: 'Override request delay in seconds'
+        required: false
+        default: ''
+        type: string
+
+env:
+  PYTHON_VERSION: "3.13.5"  # Use a stable Python version
 
 jobs:
-  Release:
+  Update:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
+    timeout-minutes: 60  # 1 hour timeout for featured players only
+    
     steps:
-      - uses: actions/checkout@master
-      - name: Setup Environment
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'  # Cache pip dependencies
+          
+      - name: Install system dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install python3-pip rar
-      - name: Install Requirements
+          sudo apt-get install -y rar imagemagick libmagickwand-dev
+          
+      - name: Install Python dependencies
         run: |
-          python3 -m pip install -r requirements.txt
-      - name: Run Script
-        run: python3 get_update_only.py
-      - name: Create Archive
-        run: rar a -r "MiniFaceServer-$(date +'%m-%d-%Y')-Update.rar" MinifaceServer
-      - name: Set ENV
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Run optimized featured players script
+        run: |
+          echo "Starting featured players download..."
+          echo "Trigger: ${{ github.event_name }}"
+          
+          # Build command with appropriate options
+          SCRIPT_CMD="python get_update_only.py"
+          
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual trigger detected"
+            
+            # Check debug mode input (defaults to true for manual runs)
+            if [ "${{ inputs.debug_mode }}" = "true" ]; then
+              echo "Debug logging enabled"
+              SCRIPT_CMD="$SCRIPT_CMD --debug"
+            else
+              echo "Debug logging disabled by user input"
+              SCRIPT_CMD="$SCRIPT_CMD --quiet"
+            fi
+            
+            # Apply worker override if provided
+            if [ -n "${{ inputs.worker_override }}" ]; then
+              if [[ "${{ inputs.worker_override }}" =~ ^[0-9]+$ ]]; then
+                echo "Overriding workers: ${{ inputs.worker_override }}"
+                SCRIPT_CMD="$SCRIPT_CMD --workers ${{ inputs.worker_override }}"
+              else
+                echo "Invalid worker override format, using defaults"
+              fi
+            fi
+            
+            # Apply delay override if provided
+            if [ -n "${{ inputs.delay_override }}" ]; then
+              if [[ "${{ inputs.delay_override }}" =~ ^[0-9]*\.?[0-9]+$ ]]; then
+                echo "Overriding request delay: ${{ inputs.delay_override }}s"
+                SCRIPT_CMD="$SCRIPT_CMD --delay ${{ inputs.delay_override }}"
+              else
+                echo "Invalid delay override format, using default"
+              fi
+            fi
+            
+          else
+            echo "Scheduled trigger detected - running in optimized quiet mode"
+            SCRIPT_CMD="$SCRIPT_CMD --quiet"
+          fi
+          
+          echo "Executing: $SCRIPT_CMD"
+          eval $SCRIPT_CMD
+          echo "Featured players download completed successfully!"
+          
+      - name: Verify output
+        run: |
+          echo "Verifying featured players download results..."
+          
+          if [ ! -d "MinifaceServer" ]; then
+            echo "❌ Error: MinifaceServer directory not found"
+            exit 1
+          fi
+          
+          total_files=$(find MinifaceServer -name "*.dds" | wc -l)
+          total_players=$(find MinifaceServer -maxdepth 1 -type d -name "[0-9]*" | wc -l)
+          
+          echo "📊 Featured Players Statistics:"
+          echo "  - Total miniface files: $total_files"
+          echo "  - Total featured players: $total_players"
+          
+          if [ $total_files -eq 0 ]; then
+            echo "❌ Warning: No featured player miniface files were generated"
+            exit 1
+          fi
+          
+          # Show detailed info for manual triggers
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.debug_mode }}" = "true" ]; then
+            echo ""
+            echo "🔍 Debug Information:"
+            echo "  - Directory structure:"
+            du -sh MinifaceServer/* | head -10
+            echo "  - Sample player directories:"
+            ls MinifaceServer/ | grep -E '^[0-9]+$' | head -5
+            echo "  - Recent files:"
+            find MinifaceServer -name "*.dds" -newer MinifaceServer -print | head -5
+          fi
+          
+          echo "✅ Featured players verification completed successfully"
+          echo "TOTAL_FEATURED_PLAYERS=$total_players" >> $GITHUB_ENV
+          
+      - name: Commit skipped_players.txt
+        run: |
+          set -e
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          SKIPFILE="MinifaceServer/content/miniface-server/skipped_players.txt"
+          if [ -f "$SKIPFILE" ]; then
+            git add "$SKIPFILE"
+            if ! git diff --cached --quiet; then
+              git commit -m "chore: update skipped_players.txt from featured update run"
+              git push origin HEAD:${GITHUB_REF##*/}
+              echo "Pushed updated skip list"
+            else
+              echo "No changes in skip list"
+            fi
+          else
+            echo "Skip file not found: $SKIPFILE"
+          fi
+
+      - name: Create optimized featured players archive
+        run: |
+          echo "Creating featured players archive..."
+          # Use better compression and exclude unnecessary files
+          rar a -r -m5 -ep1 "MiniFaceServer-$(date +'%m-%d-%Y')-Update.rar" MinifaceServer \
+            -x*.tmp -x*.log -x__pycache__ -x*.pyc
+          
+          # Get archive size for logging
+          archive_size=$(du -h "MiniFaceServer-$(date +'%m-%d-%Y')-Update.rar" | cut -f1)
+          echo "Featured players archive created successfully: $archive_size"
+          
+      - name: Set release variables
         run: |
           echo "RELEASE_NAME=MiniFaceServer-$(date +'%m-%d-%Y')" >> $GITHUB_ENV
           echo "NEXT_VER_CODE=$(date +'%m%d%Y')" >> $GITHUB_ENV
-      - uses: xresloader/upload-to-github-release@main
+          echo "RELEASE_DATE=$(date +'%B %d, %Y')" >> $GITHUB_ENV
+          echo "UPDATE_ARCHIVE=MiniFaceServer-$(date +'%m-%d-%Y')-Update.rar" >> $GITHUB_ENV
+          
+          # Set trigger type for release notes
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "TRIGGER_TYPE=Manual" >> $GITHUB_ENV
+            echo "TRIGGER_DETAILS=Manually triggered featured players update" >> $GITHUB_ENV
+          else
+            echo "TRIGGER_TYPE=Scheduled" >> $GITHUB_ENV
+            echo "TRIGGER_DETAILS=Automatically triggered featured players update" >> $GITHUB_ENV
+          fi
+          
+      - name: Check if release exists and add update or create new release
+        run: |
+          # Check if release with this tag already exists
+          if gh release view ${{ env.NEXT_VER_CODE }} >/dev/null 2>&1; then
+            echo "Release ${{ env.NEXT_VER_CODE }} exists, adding featured players update..."
+            gh release upload ${{ env.NEXT_VER_CODE }} "${{ env.UPDATE_ARCHIVE }}" --clobber
+            echo "✅ Featured players update added to existing release"
+          else
+            echo "Release ${{ env.NEXT_VER_CODE }} does not exist, creating new release..."
+            gh release create ${{ env.NEXT_VER_CODE }} "${{ env.UPDATE_ARCHIVE }}" \
+              --title "${{ env.RELEASE_NAME }}" \
+              --notes "# eFootball MinifacesServer - ${{ env.RELEASE_DATE }}
+
+**Release Type:** ${{ env.TRIGGER_TYPE }} (Featured Players Update)  
+**Generated:** ${{ env.TRIGGER_DETAILS }}
+Automated featured players update for eFootball.
+
+## Installation
+1. Copy \"content\" and \"modules\" folder to your sider folder
+2. Add the following line in your sider.ini:
+\`\`\`
+lua.module = \"MiniFaceServer.lua\"
+\`\`\`
+
+## Technical Details
+- Generated using optimized multithreaded downloader
+- Source: PESMaster featured players
+- Release Date: ${{ env.RELEASE_DATE }}
+- Total Featured Players: ${{ env.TOTAL_FEATURED_PLAYERS }}
+
+For more info: https://evoweb.uk/threads/efootball-featured-players-miniface-server-automated-aio.91794/
+---
+*This release was generated by GitHub Actions using the optimized featured players script*"
+            echo "✅ New release created with featured players update"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          file: "*.rar"
-          draft: false
-          tags: true
-          tag_name: "${{ env.NEXT_VER_CODE }}"
-          default_release_name: "${{ env.RELEASE_NAME }}"
