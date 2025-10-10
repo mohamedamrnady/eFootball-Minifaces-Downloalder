@@ -1,29 +1,18 @@
 # Agent Development Guide
 
-## Testing & Execution
-- Run tests: `python test.py`
-- Run main script: `python script.py` 
-- Install dependencies: `pip install -r requirements.txt`
-- No specific lint/build commands - this is a Python scraping project
-
-## Code Style & Conventions
-- **Imports**: Standard library first, then third-party (`requests`, `bs4`, `pandas`, `wand`), then local modules
-- **Functions**: Use snake_case naming, include docstrings for public functions
-- **Variables**: Use snake_case, descriptive names (e.g., `leagues_urls`, `done_players`)
-- **Constants**: Use UPPER_CASE for configuration values in `config.py`
-- **Threading**: Use `ThreadPoolExecutor`, thread-safe locks for shared resources (`threading.Lock()`)
-- **Error handling**: Use `log_error()` and `log_debug()` functions, graceful degradation with try/catch
-- **Configuration**: All settings in `config.py` with fallback defaults in main modules
-
-## Project Structure
-- Main entry: `script.py` (optimized multi-threaded version)
-- Configuration: `config.py` (threading, delays, timeouts)
-- Core modules: `teams.py`, `players_in_team.py`, `get_miniface.py`
-- Output directory: `MinifaceServer/content/miniface-server/`
-- Test suite: `test.py`
-
-## Key Patterns
-- Thread-safe global state using locks (e.g., `done_players_lock`)
-- Configurable delays and timeouts for rate limiting
-- Concurrent processing at team, player, and image levels
-- Progress tracking with detailed logging
+- Setup: `uv sync`
+- Run: `uv run script.py` (multithreaded downloader)
+- Tests (all): `uv run test.py`
+- Lint/format: none configured; optionally run `black .` and `isort .`
+- Type checks: optional `mypy .` if installed; add hints to new code
+- Imports: stdlib, third-party (`requests`, `bs4`, `pandas`, `wand`), then local
+- Naming: snake_case for functions/vars; UPPER_CASE constants; CapWords classes
+- Formatting: PEP 8; keep lines ≤ 100 chars; no one-letter names
+- Errors: prefer graceful handling; use `log_error`, `log_info`, `debug_print`/`log_debug`
+- Concurrency: use `ThreadPoolExecutor`; guard shared sets/files with locks
+- Shared state: modify `done_players`, `skipped_players`, `downloaded_events` only under locks
+- I/O: create directories atomically; avoid race conditions; respect `REQUEST_DELAY`
+- Config: read tunables from `config.py`; avoid hardcoded magic numbers
+- Tests pattern: network calls may fail; keep retries/backoff consistent with code
+- Editor rules: No Cursor or Copilot rules detected in repo
+- Output dir: `MinifaceServer/content/miniface-server/` (script `chdir`s there)

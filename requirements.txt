@@ -1,7 +1,0 @@
-requests
-bs4
-typing
-wand
-pandas
-pyOpenSSL
-idna

@@ -1,4 +1,4 @@
-name: New Release
+~name: New Release
 
 on:
   schedule:
@@ -21,9 +21,6 @@ on:
         default: ''
         type: string
 
-env:
-  PYTHON_VERSION: "3.13.5"  # Use a stable Python version
-
 jobs:
   Release:
     permissions:
@@ -35,11 +32,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'  # Cache pip dependencies
+          enable-cache: true
+          python-version: 3.14t
+          
+      - name: Verify Python version and GIL status
+        run: |
+          uv run python --version
+          uv run python -c "import sys; print(f'GIL Enabled: {sys._is_gil_enabled()}')"
+          echo "Expected: GIL Enabled: False (free-threading active)"
           
       - name: Install system dependencies
         run: |
@@ -47,16 +50,19 @@ jobs:
           
       - name: Install Python dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          uv sync
           
       - name: Run optimized script
         run: |
           echo "Starting eFootball miniface download..."
           echo "Trigger: ${{ github.event_name }}"
           
+          # Verify GIL is disabled
+          uv run python -c "import sys; assert not sys._is_gil_enabled(), 'GIL should be disabled!'"
+          echo "✓ Free-threading confirmed active"
+          
           # Build command with appropriate options
-          SCRIPT_CMD="python script.py"
+          SCRIPT_CMD="uv run script.py"
           
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "Manual trigger detected"

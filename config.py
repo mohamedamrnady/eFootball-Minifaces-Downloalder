@@ -1,4 +1,13 @@
 # Configuration file for the optimized eFootball miniface downloader
+# Python 3.14t Free-Threading Optimized
+
+import sys
+
+# Detect if GIL is disabled (free-threading mode)
+if hasattr(sys, "_is_gil_enabled"):
+    GIL_ENABLED = sys._is_gil_enabled()
+else:
+    GIL_ENABLED = True  # Assume GIL is enabled if we can't detect
 
 # Debug and Logging Configuration
 DEBUG_MODE = (
@@ -6,11 +15,19 @@ DEBUG_MODE = (
 )
 QUIET_MODE = False  # Enable quiet mode by default (can be overridden by --quiet flag)
 
-# Threading Configuration
+# Threading Configuration - Optimized for Free-Threading
 # Adjust these based on your system and network capacity
-MAX_WORKERS_TEAMS = 4  # Concurrent teams processing
-MAX_WORKERS_PLAYERS = 8  # Concurrent players per team
-MAX_WORKERS_IMAGES = 6  # Concurrent image downloads per player
+# With free-threading (GIL disabled), we can use MORE workers for true parallelism
+if not GIL_ENABLED:
+    # Free-threading optimized: 2x more workers for true parallel execution
+    MAX_WORKERS_TEAMS = 8  # Concurrent teams processing (2x increase)
+    MAX_WORKERS_PLAYERS = 16  # Concurrent players per team (2x increase)
+    MAX_WORKERS_IMAGES = 12  # Concurrent image downloads per player (2x increase)
+else:
+    # Conservative settings for GIL-bound Python
+    MAX_WORKERS_TEAMS = 4  # Concurrent teams processing
+    MAX_WORKERS_PLAYERS = 8  # Concurrent players per team
+    MAX_WORKERS_IMAGES = 6  # Concurrent image downloads per player
 
 # Request Rate Limiting
 # These delays help avoid overwhelming the server
