@@ -1,4 +1,4 @@
-~name: New Release
+name: New Release
 
 on:
   schedule:
