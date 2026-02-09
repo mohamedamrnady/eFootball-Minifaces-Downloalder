@@ -58,6 +58,9 @@ jobs:
         run: |
           choco install imagemagick -y
           choco install winrar -y
+          # Verify WinRAR installation
+          where rar.exe
+          rar.exe
           
       - name: Install Python dependencies
         run: |
@@ -190,8 +193,8 @@ jobs:
         run: |
           echo "Creating archive..."
           $date = Get-Date -Format "MM-dd-yyyy"
-          # Use WinRAR with better compression and exclude unnecessary files
-          & "C:\Program Files\WinRAR\WinRAR.exe" a -r -m5 -ep1 "MiniFaceServer-$date-windows.rar" MinifaceServer -x*.tmp -x*.log -x__pycache__ -x*.pyc
+          # Use rar command (should be in PATH after chocolatey install)
+          rar a -r -m5 -ep1 "MiniFaceServer-$date-windows.rar" MinifaceServer -x*.tmp -x*.log -x__pycache__ -x*.pyc
           
           # Get archive size for logging
           $archiveSize = (Get-Item "MiniFaceServer-$date-windows.rar").Length / 1MB
@@ -205,6 +208,7 @@ jobs:
           echo "RELEASE_DATE=$(date +'%B %d, %Y')" >> $GITHUB_ENV
           echo "ARCHIVE_FILE=MiniFaceServer-$(date +'%m-%d-%Y')-linux.rar" >> $GITHUB_ENV
           echo "OS_SUFFIX=linux" >> $GITHUB_ENV
+          echo "PLATFORM_DETAILS=Ubuntu Linux" >> $GITHUB_ENV
           
           # Set trigger type for release notes
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -227,6 +231,7 @@ jobs:
           echo "RELEASE_DATE=$dateLong" >> $env:GITHUB_ENV
           echo "ARCHIVE_FILE=MiniFaceServer-$date-windows.rar" >> $env:GITHUB_ENV
           echo "OS_SUFFIX=windows" >> $env:GITHUB_ENV
+          echo "PLATFORM_DETAILS=Windows Server 2019 with VS2019 Build Tools" >> $env:GITHUB_ENV
           
           # Set trigger type for release notes
           if ("${{ github.event_name }}" -eq "workflow_dispatch") {
@@ -268,7 +273,7 @@ jobs:
             - Source: PESMaster database
             - Release Date: ${{ env.RELEASE_DATE }}
             - Total Players: ${{ env.TOTAL_PLAYERS }}
-            - Built on: ${{ matrix.os }} (VS2019 tools for Windows builds)
+            - Built on: ${{ env.PLATFORM_DETAILS }}
             
             For more info: https://evoweb.uk/threads/efootball-featured-players-miniface-server-automated-aio.91794/
             ---
