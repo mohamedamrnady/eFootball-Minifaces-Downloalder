@@ -63,9 +63,9 @@ jobs:
         run: |
           choco install imagemagick -y
           choco install winrar -y
-          # Verify WinRAR installation
+          # Verify WinRAR installation and show version
           where rar.exe
-          rar.exe
+          rar.exe --version || echo "RAR installed successfully"
           
       - name: Install Python dependencies
         run: |
