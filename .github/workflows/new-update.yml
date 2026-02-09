@@ -25,7 +25,10 @@ jobs:
   Update:
     permissions:
       contents: write
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-2019]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 60  # 1 hour timeout for featured players only
     
     steps:
@@ -49,10 +52,17 @@ jobs:
           uv run python -c "import sys; print(f'GIL Enabled: {sys._is_gil_enabled()}')"
           echo "Expected: GIL Enabled: False (free-threading active)"
           
-      - name: Install system dependencies
+      - name: Install system dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y rar imagemagick libmagickwand-dev
+          
+      - name: Install system dependencies (Windows)
+        if: matrix.os == 'windows-2019'
+        run: |
+          choco install imagemagick -y
+          choco install winrar -y
           
       - name: Install Python dependencies
         run: |
@@ -166,7 +176,8 @@ jobs:
             echo "Skip file not found: $SKIPFILE"
           fi
 
-      - name: Create optimized featured players archive
+      - name: Create optimized featured players archive (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
         run: |
           echo "Creating featured players archive..."
           # Use better compression and exclude unnecessary files
@@ -177,12 +188,27 @@ jobs:
           archive_size=$(du -h "MiniFaceServer-$(date +'%m-%d-%Y')-Update.rar" | cut -f1)
           echo "Featured players archive created successfully: $archive_size"
           
-      - name: Set release variables
+      - name: Create optimized featured players archive (Windows)
+        if: matrix.os == 'windows-2019'
+        shell: pwsh
+        run: |
+          echo "Creating featured players archive..."
+          $date = Get-Date -Format "MM-dd-yyyy"
+          # Use WinRAR with better compression and exclude unnecessary files
+          & "C:\Program Files\WinRAR\WinRAR.exe" a -r -m5 -ep1 "MiniFaceServer-$date-Update.rar" MinifaceServer -x*.tmp -x*.log -x__pycache__ -x*.pyc
+          
+          # Get archive size for logging
+          $archiveSize = (Get-Item "MiniFaceServer-$date-Update.rar").Length / 1MB
+          echo "Featured players archive created successfully: $([math]::Round($archiveSize, 2)) MB"
+          
+      - name: Set release variables (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
         run: |
           echo "RELEASE_NAME=MiniFaceServer-$(date +'%m-%d-%Y')" >> $GITHUB_ENV
           echo "NEXT_VER_CODE=$(date +'%m%d%Y')" >> $GITHUB_ENV
           echo "RELEASE_DATE=$(date +'%B %d, %Y')" >> $GITHUB_ENV
           echo "UPDATE_ARCHIVE=MiniFaceServer-$(date +'%m-%d-%Y')-Update.rar" >> $GITHUB_ENV
+          echo "OS_SUFFIX=linux" >> $GITHUB_ENV
           
           # Set trigger type for release notes
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -193,13 +219,36 @@ jobs:
             echo "TRIGGER_DETAILS=Automatically triggered featured players update" >> $GITHUB_ENV
           fi
           
+      - name: Set release variables (Windows)
+        if: matrix.os == 'windows-2019'
+        shell: pwsh
+        run: |
+          $date = Get-Date -Format "MM-dd-yyyy"
+          $dateCode = Get-Date -Format "MMddyyyy"
+          $dateLong = Get-Date -Format "MMMM dd, yyyy"
+          echo "RELEASE_NAME=MiniFaceServer-$date" >> $env:GITHUB_ENV
+          echo "NEXT_VER_CODE=$dateCode" >> $env:GITHUB_ENV
+          echo "RELEASE_DATE=$dateLong" >> $env:GITHUB_ENV
+          echo "UPDATE_ARCHIVE=MiniFaceServer-$date-Update.rar" >> $env:GITHUB_ENV
+          echo "OS_SUFFIX=windows" >> $env:GITHUB_ENV
+          
+          # Set trigger type for release notes
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            echo "TRIGGER_TYPE=Manual" >> $env:GITHUB_ENV
+            echo "TRIGGER_DETAILS=Manually triggered featured players update" >> $env:GITHUB_ENV
+          } else {
+            echo "TRIGGER_TYPE=Scheduled" >> $env:GITHUB_ENV
+            echo "TRIGGER_DETAILS=Automatically triggered featured players update" >> $env:GITHUB_ENV
+          }
+          
       - name: Check if release exists and add update or create new release
+        shell: bash
         run: |
           # Check if release with this tag already exists
           if gh release view ${{ env.NEXT_VER_CODE }} >/dev/null 2>&1; then
             echo "Release ${{ env.NEXT_VER_CODE }} exists, adding featured players update..."
             gh release upload ${{ env.NEXT_VER_CODE }} "${{ env.UPDATE_ARCHIVE }}" --clobber
-            echo "✅ Featured players update added to existing release"
+            echo "✅ Featured players update (${{ env.OS_SUFFIX }}) added to existing release"
           else
             echo "Release ${{ env.NEXT_VER_CODE }} does not exist, creating new release..."
             gh release create ${{ env.NEXT_VER_CODE }} "${{ env.UPDATE_ARCHIVE }}" \
@@ -208,6 +257,7 @@ jobs:
             
             **Release Type:** ${{ env.TRIGGER_TYPE }} (Featured Players Update)
             **Generated:** ${{ env.TRIGGER_DETAILS }}
+            **Build Platform:** ${{ matrix.os }}
             Automated featured players update for eFootball.
             
             ## Installation
@@ -222,11 +272,12 @@ jobs:
             - Source: PESMaster featured players
             - Release Date: ${{ env.RELEASE_DATE }}
             - Total Featured Players: ${{ env.TOTAL_FEATURED_PLAYERS }}
+            - Built on: ${{ matrix.os }} (VS2019 tools for Windows builds)
             
             For more info: https://evoweb.uk/threads/efootball-featured-players-miniface-server-automated-aio.91794/
             ---
             *This release was generated by GitHub Actions using the optimized featured players script*"
-            echo "✅ New release created with featured players update"
+            echo "✅ New release created with featured players update (${{ env.OS_SUFFIX }})"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
