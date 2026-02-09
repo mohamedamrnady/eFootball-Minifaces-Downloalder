@@ -100,9 +100,11 @@ Result: Same as scheduled run but manually triggered
 ## Workflow Outputs
 
 ### 📦 Multi-Platform Releases
-Each workflow run creates archives for both platforms:
-- `MiniFaceServer-MM-DD-YYYY.rar` (Linux build)
-- `MiniFaceServer-MM-DD-YYYY.rar` (Windows build with VS2019)
+Each workflow run creates platform-specific archives:
+- `MiniFaceServer-MM-DD-YYYY-linux.rar` (Linux build)
+- `MiniFaceServer-MM-DD-YYYY-windows.rar` (Windows build with VS2019)
+- `MiniFaceServer-MM-DD-YYYY-Update-linux.rar` (Linux featured players update)
+- `MiniFaceServer-MM-DD-YYYY-Update-windows.rar` (Windows featured players update)
 
 Both archives are uploaded to the same GitHub release, allowing users to choose the appropriate build for their environment.
 

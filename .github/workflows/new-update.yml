@@ -181,11 +181,11 @@ jobs:
         run: |
           echo "Creating featured players archive..."
           # Use better compression and exclude unnecessary files
-          rar a -r -m5 -ep1 "MiniFaceServer-$(date +'%m-%d-%Y')-Update.rar" MinifaceServer \
+          rar a -r -m5 -ep1 "MiniFaceServer-$(date +'%m-%d-%Y')-Update-linux.rar" MinifaceServer \
             -x*.tmp -x*.log -x__pycache__ -x*.pyc
           
           # Get archive size for logging
-          archive_size=$(du -h "MiniFaceServer-$(date +'%m-%d-%Y')-Update.rar" | cut -f1)
+          archive_size=$(du -h "MiniFaceServer-$(date +'%m-%d-%Y')-Update-linux.rar" | cut -f1)
           echo "Featured players archive created successfully: $archive_size"
           
       - name: Create optimized featured players archive (Windows)
@@ -195,10 +195,10 @@ jobs:
           echo "Creating featured players archive..."
           $date = Get-Date -Format "MM-dd-yyyy"
           # Use WinRAR with better compression and exclude unnecessary files
-          & "C:\Program Files\WinRAR\WinRAR.exe" a -r -m5 -ep1 "MiniFaceServer-$date-Update.rar" MinifaceServer -x*.tmp -x*.log -x__pycache__ -x*.pyc
+          & "C:\Program Files\WinRAR\WinRAR.exe" a -r -m5 -ep1 "MiniFaceServer-$date-Update-windows.rar" MinifaceServer -x*.tmp -x*.log -x__pycache__ -x*.pyc
           
           # Get archive size for logging
-          $archiveSize = (Get-Item "MiniFaceServer-$date-Update.rar").Length / 1MB
+          $archiveSize = (Get-Item "MiniFaceServer-$date-Update-windows.rar").Length / 1MB
           echo "Featured players archive created successfully: $([math]::Round($archiveSize, 2)) MB"
           
       - name: Set release variables (Ubuntu)
@@ -207,7 +207,7 @@ jobs:
           echo "RELEASE_NAME=MiniFaceServer-$(date +'%m-%d-%Y')" >> $GITHUB_ENV
           echo "NEXT_VER_CODE=$(date +'%m%d%Y')" >> $GITHUB_ENV
           echo "RELEASE_DATE=$(date +'%B %d, %Y')" >> $GITHUB_ENV
-          echo "UPDATE_ARCHIVE=MiniFaceServer-$(date +'%m-%d-%Y')-Update.rar" >> $GITHUB_ENV
+          echo "UPDATE_ARCHIVE=MiniFaceServer-$(date +'%m-%d-%Y')-Update-linux.rar" >> $GITHUB_ENV
           echo "OS_SUFFIX=linux" >> $GITHUB_ENV
           
           # Set trigger type for release notes
@@ -229,7 +229,7 @@ jobs:
           echo "RELEASE_NAME=MiniFaceServer-$date" >> $env:GITHUB_ENV
           echo "NEXT_VER_CODE=$dateCode" >> $env:GITHUB_ENV
           echo "RELEASE_DATE=$dateLong" >> $env:GITHUB_ENV
-          echo "UPDATE_ARCHIVE=MiniFaceServer-$date-Update.rar" >> $env:GITHUB_ENV
+          echo "UPDATE_ARCHIVE=MiniFaceServer-$date-Update-windows.rar" >> $env:GITHUB_ENV
           echo "OS_SUFFIX=windows" >> $env:GITHUB_ENV
           
           # Set trigger type for release notes
