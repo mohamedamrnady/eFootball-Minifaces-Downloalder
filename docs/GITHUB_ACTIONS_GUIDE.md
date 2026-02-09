@@ -2,7 +2,30 @@
 
 ## Overview
 
-The `new-release.yml` workflow now intelligently handles different trigger types with conditional logging and enhanced manual control.
+The `new-release.yml` and `new-update.yml` workflows now support multi-platform builds with both Linux and Windows (VS2019 tools), and intelligently handle different trigger types with conditional logging and enhanced manual control.
+
+## Platform Support
+
+### 🐧 Ubuntu Linux (ubuntu-latest)
+**Environment:** Standard GitHub-hosted Ubuntu runner  
+**Tools:**
+- Python 3.14t with free-threading support
+- ImageMagick installed via apt-get
+- RAR compression tool
+
+### 🪟 Windows (windows-2019)
+**Environment:** GitHub-hosted Windows Server 2019 with **Visual Studio 2019 Build Tools**  
+**Tools:**
+- Python 3.14t with free-threading support
+- ImageMagick installed via Chocolatey
+- WinRAR for archive creation
+- VS2019 toolset for native extension compilation
+
+**Benefits of VS2019 Tools:**
+- ✅ Native Windows build support for `wand` library (ImageMagick Python bindings)
+- ✅ Proper C++ compilation for Python native extensions
+- ✅ Better compatibility with Windows-based deployment scenarios
+- ✅ Parallel builds on both platforms ensure cross-platform compatibility
 
 ## Trigger Types
 
@@ -75,6 +98,13 @@ Set inputs:
 Result: Same as scheduled run but manually triggered
 
 ## Workflow Outputs
+
+### 📦 Multi-Platform Releases
+Each workflow run creates archives for both platforms:
+- `MiniFaceServer-MM-DD-YYYY.rar` (Linux build)
+- `MiniFaceServer-MM-DD-YYYY.rar` (Windows build with VS2019)
+
+Both archives are uploaded to the same GitHub release, allowing users to choose the appropriate build for their environment.
 
 ### 📊 Scheduled Release Logs
 ```

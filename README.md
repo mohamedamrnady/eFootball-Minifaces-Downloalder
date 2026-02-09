@@ -10,6 +10,12 @@ This is an **advanced, free-threaded, multi-parallel** version of the eFootball 
 - ✅ 1.5-2x overall performance boost
 - ✅ Scales linearly with CPU cores
 
+**🪟 NEW: Windows Support with VS2019 Tools!**
+- ✅ Native Windows builds using Visual Studio 2019 toolset
+- ✅ Automated GitHub Actions workflows for both Linux and Windows
+- ✅ Cross-platform compatibility testing
+- ✅ Windows-optimized dependency installation
+
 Single-thread version can be found in the "single-threaded" branch (discontinued)
 
 ## Performance Improvements
@@ -40,7 +46,10 @@ Single-thread version can be found in the "single-threaded" branch (discontinued
 ### Prerequisites
 
 - **Python 3.14t (free-threaded build)** for best performance
-- ImageMagick (for `wand` library)
+- **ImageMagick** (for `wand` library)
+  - Linux: Install via `apt-get install imagemagick libmagickwand-dev`
+  - Windows: Install via `choco install imagemagick` or download from [ImageMagick website](https://imagemagick.org/)
+- **Optional for Windows:** Visual Studio 2019 Build Tools for native extension compilation
 
 ### 1. Install Python 3.14t Free-Threading
 
