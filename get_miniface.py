@@ -11,6 +11,10 @@ import time
 downloaded_events_lock = threading.Lock()
 downloaded_events = {"names": [], "bytes": []}
 
+# Thread-safe locks for directory and file operations
+directory_creation_lock = threading.Lock()
+file_save_lock = threading.Lock()
+
 # Configuration for image downloads
 MAX_IMAGE_WORKERS = 4
 IMAGE_REQUEST_DELAY = 0.05  # Small delay between image requests
@@ -30,10 +34,98 @@ def log_debug(message):
         print(f"[DEBUG] {message}")
 
 
-def miniface_downloader(card, player_id=None):
+def save_miniface_image(player_id, image_dict, with_background=True, base_dir="."):
     """
-    Thread-safe version of miniface downloader with concurrent image processing
+    Save miniface image to disk with proper thread safety.
+
+    Args:
+        player_id: Player ID for directory structure
+        image_dict: Dictionary containing image data (bytes, background_bytes, team, id)
+        with_background: If True, composite background with foreground; if False, save foreground only
+        base_dir: Base directory for saving (relative or absolute path)
+
+    Returns:
+        bool: True if save successful, False otherwise
     """
+    if not image_dict["bytes"]:
+        log_debug(f"No foreground image for player {player_id}, skipping save")
+        return False
+
+    # For background version, we need both images
+    if with_background and not image_dict["background_bytes"]:
+        log_debug(
+            f"No background image for player {player_id}, skipping background save"
+        )
+        return False
+
+    try:
+        # Thread-safe directory creation for player
+        player_dir = os.path.join(base_dir, player_id)
+        with directory_creation_lock:
+            if not os.path.exists(player_dir):
+                os.makedirs(player_dir)
+
+        # Thread-safe directory creation for team
+        team_dir = os.path.join(player_dir, image_dict["team"])
+        with directory_creation_lock:
+            if not os.path.exists(team_dir):
+                os.makedirs(team_dir)
+
+        fn = os.path.join(team_dir, image_dict["id"] + ".dds")
+
+        # Thread-safe file save with atomic check-then-save
+        with file_save_lock:
+            if os.path.exists(fn):
+                log_debug(f"File already exists: {fn}")
+                return True
+
+            # Image processing
+            if with_background:
+                # Composite version (background + foreground)
+                back_img = image.Image(blob=image_dict["background_bytes"])
+                fore_img = image.Image(blob=image_dict["bytes"])
+                back_img.trim(percent_background=0.5)
+                back_img.resize(fore_img.width, fore_img.height)
+                back_img.composite(fore_img)
+                back_img.compression = "dxt5"
+                back_img.save(filename=fn)
+            else:
+                # No-background version (foreground only)
+                fore_img = image.Image(blob=image_dict["bytes"])
+                fore_img.compression = "dxt5"
+                fore_img.save(filename=fn)
+
+            log_debug(
+                f"Saved {'background' if with_background else 'no-background'} image: {fn}"
+            )
+            return True
+
+    except Exception as e:
+        log_error(
+            f"Error saving {'background' if with_background else 'no-background'} image for player {player_id}: {e}"
+        )
+        return False
+
+
+def miniface_downloader(
+    card, player_id=None, output_dir_standard=None, output_dir_background=None
+):
+    """
+    Thread-safe version of miniface downloader with concurrent image processing.
+    Saves to both standard (no-background) and background versions.
+
+    Args:
+        card: BeautifulSoup card element to process
+        player_id: Optional player ID (will be extracted if not provided)
+        output_dir_standard: Directory for no-background version (default: current directory)
+        output_dir_background: Directory for background version (default: None, skips background save)
+    """
+    if output_dir_standard is None:
+        output_dir_standard = "."
+
+    if output_dir_standard is None:
+        output_dir_standard = "."
+
     image_dict = {
         "team": "",
         "default": True,
@@ -114,35 +206,24 @@ def miniface_downloader(card, player_id=None):
             log_error(f"Could not determine player_id from {image_dict['id']}")
             return
 
-    # Thread-safe directory creation and file writing
-    if not os.path.exists(player_id):
-        # Use a lock to prevent race conditions in directory creation
-        with threading.Lock():
-            if not os.path.exists(player_id):
-                os.makedirs(player_id)
-
+    # Save both versions: no-background and with-background
     if image_dict["bytes"] and image_dict["background_bytes"]:
-        dirc = os.path.join(player_id, image_dict["team"])
-        if not os.path.exists(dirc):
-            with threading.Lock():
-                if not os.path.exists(dirc):
-                    os.makedirs(dirc)
+        # Save to standard directory (no background)
+        save_miniface_image(
+            player_id,
+            image_dict,
+            with_background=False,
+            base_dir=output_dir_standard,
+        )
 
-        fn = os.path.join(dirc, image_dict["id"] + ".dds")
-
-        # Only create the file if it doesn't exist
-        if not os.path.exists(fn):
-            try:
-                # Image processing
-                back_img = image.Image(blob=image_dict["background_bytes"])
-                fore_img = image.Image(blob=image_dict["bytes"])
-                back_img.trim(percent_background=0.5)
-                back_img.resize(fore_img.width, fore_img.height)
-                back_img.composite(fore_img)
-                back_img.compression = "dxt5"
-                back_img.save(filename=fn)
-            except Exception as e:
-                log_error(f"Error processing image for player {player_id}: {e}")
+        # Save to background directory if specified
+        if output_dir_background:
+            save_miniface_image(
+                player_id,
+                image_dict,
+                with_background=True,
+                base_dir=output_dir_background,
+            )
 
 
 def download_image(url: str, fallback_attempted=False):

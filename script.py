@@ -35,7 +35,13 @@ done_players = set()
 # Skipped players list (persisted between runs)
 skipped_players_lock = threading.Lock()
 skipped_players = set()
-SKIPPED_FILE = "skipped_players.txt"
+
+# Output directory paths
+OUTPUT_DIR_STANDARD = os.path.join("MinifaceServer", "content", "miniface-server")
+OUTPUT_DIR_BACKGROUND = os.path.join(
+    "MinifaceServer-Background", "content", "miniface-server"
+)
+SKIPPED_FILE = os.path.join(OUTPUT_DIR_STANDARD, "skipped_players.txt")
 
 # Global debug flag
 DEBUG = False
@@ -148,10 +154,9 @@ Examples:
     return parser.parse_args()
 
 
-cwdir = os.path.join("MinifaceServer", "content", "miniface-server")
-if not os.path.exists(cwdir):
-    os.makedirs(cwdir)
-os.chdir(cwdir)
+"""Ensure output directories exist for both versions."""
+os.makedirs(OUTPUT_DIR_STANDARD, exist_ok=True)
+os.makedirs(OUTPUT_DIR_BACKGROUND, exist_ok=True)
 
 
 def initialize_script():
@@ -264,7 +269,9 @@ def process_player(player_url, team_name, league_name):
             return f"No efootball-2022 cards found for player {player_id}"
 
         for card in cards_div:
-            miniface_downloader(card, player_id)
+            miniface_downloader(
+                card, player_id, OUTPUT_DIR_STANDARD, OUTPUT_DIR_BACKGROUND
+            )
 
         log_success(f"Processed player {player_id} from {team_name}")
         return f"✓ Processed player {player_id} from {team_name}"

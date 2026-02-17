@@ -135,3 +135,6 @@ Minifaces
 *.png
 *.dds
 *.csv
+
+# Exclude background version folder (created at runtime)
+MinifaceServer-Background/

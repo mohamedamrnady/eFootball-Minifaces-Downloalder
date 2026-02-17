@@ -2,23 +2,23 @@ name: New Release
 
 on:
   schedule:
-    - cron: "0 0 * * 4"  # Weekly on Thursday at midnight UTC
-  workflow_dispatch:  # Allow manual triggering
+    - cron: "0 0 * * 4" # Weekly on Thursday at midnight UTC
+  workflow_dispatch: # Allow manual triggering
     inputs:
       debug_mode:
-        description: 'Enable debug logging'
+        description: "Enable debug logging"
         required: false
-        default: 'true'
+        default: "true"
         type: boolean
       worker_override:
         description: 'Override worker counts (format: teams,players e.g., "2,4")'
         required: false
-        default: ''
+        default: ""
         type: string
       delay_override:
-        description: 'Override request delay in seconds'
+        description: "Override request delay in seconds"
         required: false
-        default: ''
+        default: ""
         type: string
 
 jobs:
@@ -26,45 +26,45 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-latest
-    timeout-minutes: 180  # 3 hour timeout for long-running downloads
-    
+    timeout-minutes: 180 # 3 hour timeout for long-running downloads
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: Install uv
         uses: astral-sh/setup-uv@v4
         with:
           enable-cache: true
           python-version: 3.14t
-          
+
       - name: Verify Python version and GIL status
         run: |
           uv run python --version
           uv run python -c "import sys; print(f'GIL Enabled: {sys._is_gil_enabled()}')"
           echo "Expected: GIL Enabled: False (free-threading active)"
-          
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y rar imagemagick libmagickwand-dev
-          
+
       - name: Install Python dependencies
         run: |
           uv sync
-          
+
       - name: Run optimized script
         run: |
           echo "Starting eFootball miniface download..."
           echo "Trigger: ${{ github.event_name }}"
-          
+
           # Verify GIL is disabled
           uv run python -c "import sys; assert not sys._is_gil_enabled(), 'GIL should be disabled!'"
           echo "✓ Free-threading confirmed active"
-          
+
           # Build command with appropriate options
           SCRIPT_CMD="uv run script.py"
-          
+
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "Manual trigger detected"
             
@@ -102,32 +102,32 @@ jobs:
             echo "Scheduled trigger detected - running in optimized quiet mode"
             SCRIPT_CMD="$SCRIPT_CMD --quiet"
           fi
-          
+
           echo "Executing: $SCRIPT_CMD"
           eval $SCRIPT_CMD
           echo "Download completed successfully!"
-          
+
       - name: Verify output
         run: |
           echo "Verifying download results..."
-          
+
           if [ ! -d "MinifaceServer" ]; then
             echo "❌ Error: MinifaceServer directory not found"
             exit 1
           fi
-          
+
           total_files=$(find MinifaceServer -name "*.dds" | wc -l)
           total_players=$(find MinifaceServer -maxdepth 1 -type d -name "[0-9]*" | wc -l)
-          
+
           echo "📊 Download Statistics:"
           echo "  - Total miniface files: $total_files"
           echo "  - Total players: $total_players"
-          
+
           if [ $total_files -eq 0 ]; then
             echo "❌ Warning: No miniface files were generated"
             exit 1
           fi
-          
+
           # Show detailed info for manual triggers
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.debug_mode }}" = "true" ]; then
             echo ""
@@ -139,10 +139,50 @@ jobs:
             echo "  - Recent files:"
             find MinifaceServer -name "*.dds" -newer MinifaceServer -print | head -5
           fi
-          
+
           echo "✅ Verification completed successfully"
-          echo "TOTAL_PLAYERS=$(total_players)" >> $GITHUB_ENV
-          
+          echo "TOTAL_PLAYERS=$total_players" >> $GITHUB_ENV
+
+          # Verify MinifaceServer-Background
+          echo ""
+          echo "Verifying background version..."
+
+          if [ ! -d "MinifaceServer-Background" ]; then
+            echo "❌ Error: MinifaceServer-Background directory not found"
+            exit 1
+          fi
+
+          bg_files=$(find MinifaceServer-Background -name "*.dds" | wc -l)
+          bg_players=$(find MinifaceServer-Background/content/miniface-server -maxdepth 1 -type d -name "[0-9]*" | wc -l)
+
+          echo "📊 Background Version Statistics:"
+          echo "  - Total miniface files: $bg_files"
+          echo "  - Total players: $bg_players"
+
+          if [ $bg_files -eq 0 ]; then
+            echo "❌ Warning: No background miniface files were generated"
+            exit 1
+          fi
+
+          # Compare counts
+          if [ $total_files -ne $bg_files ]; then
+            echo "⚠️  Warning: File count mismatch (Standard: $total_files, Background: $bg_files)"
+          else
+            echo "✅ Both versions have matching file counts"
+          fi
+
+      - name: Sync skipped_players.txt to background version
+        run: |
+          SKIPFILE="MinifaceServer/content/miniface-server/skipped_players.txt"
+          BG_SKIPFILE="MinifaceServer-Background/content/miniface-server/skipped_players.txt"
+
+          if [ -f "$SKIPFILE" ]; then
+            cp "$SKIPFILE" "$BG_SKIPFILE"
+            echo "✅ Synced skipped_players.txt to background version"
+          else
+            echo "⚠️  Skip file not found: $SKIPFILE"
+          fi
+
       - name: Commit skipped_players.txt
         run: |
           set -e
@@ -162,23 +202,54 @@ jobs:
             echo "Skip file not found: $SKIPFILE"
           fi
 
-      - name: Create optimized archive
+      - name: Prepare background version folder structure
         run: |
-          echo "Creating archive..."
-          # Use better compression and exclude unnecessary files
+          echo "Copying static files to background version..."
+
+          # Copy modules directory
+          mkdir -p MinifaceServer-Background/modules
+          cp -r MinifaceServer/modules/* MinifaceServer-Background/modules/
+
+          # Copy credits.txt if exists
+          if [ -f "MinifaceServer/content/miniface-server/credits.txt" ]; then
+            cp MinifaceServer/content/miniface-server/credits.txt MinifaceServer-Background/content/miniface-server/
+          fi
+
+          echo "✅ Background version folder structure prepared"
+
+      - name: Create optimized archives
+        run: |
+          echo "Creating archives for both versions..."
+
+          # Create standard (no-background) archive
+          echo "Creating standard version archive..."
           rar a -r -m5 -ep1 "MiniFaceServer-$(date +'%m-%d-%Y').rar" MinifaceServer \
             -x*.tmp -x*.log -x__pycache__ -x*.pyc
-          
-          # Get archive size for logging
-          archive_size=$(du -h "MiniFaceServer-$(date +'%m-%d-%Y').rar" | cut -f1)
-          echo "Archive created successfully: $archive_size"
-          
+          standard_size=$(du -h "MiniFaceServer-$(date +'%m-%d-%Y').rar" | cut -f1)
+          echo "✅ Standard archive created: $standard_size"
+
+          # Create background version archive
+          echo "Creating background version archive..."
+          rar a -r -m5 -ep1 "MiniFaceServer-Background-$(date +'%m-%d-%Y').rar" MinifaceServer-Background \
+            -x*.tmp -x*.log -x__pycache__ -x*.pyc
+          background_size=$(du -h "MiniFaceServer-Background-$(date +'%m-%d-%Y').rar" | cut -f1)
+          echo "✅ Background archive created: $background_size"
+
+          echo ""
+          echo "📦 Archive Summary:"
+          echo "  - Standard (no-background): $standard_size"
+          echo "  - Background (composite): $background_size"
+
+          # Store for release notes
+          echo "ARCHIVE_STANDARD_SIZE=$standard_size" >> $GITHUB_ENV
+          echo "ARCHIVE_BACKGROUND_SIZE=$background_size" >> $GITHUB_ENV
+
       - name: Set release variables
         run: |
           echo "RELEASE_NAME=MiniFaceServer-$(date +'%m-%d-%Y')" >> $GITHUB_ENV
           echo "NEXT_VER_CODE=$(date +'%m%d%Y')" >> $GITHUB_ENV
           echo "RELEASE_DATE=$(date +'%B %d, %Y')" >> $GITHUB_ENV
-          
+
           # Set trigger type for release notes
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "TRIGGER_TYPE=Manual" >> $GITHUB_ENV
@@ -187,41 +258,64 @@ jobs:
             echo "TRIGGER_TYPE=Scheduled" >> $GITHUB_ENV
             echo "TRIGGER_DETAILS=Automatically triggered on schedule" >> $GITHUB_ENV
           fi
-          
+
       - name: Check if release exists and add full release or create new release
         run: |
           # Check if release with this tag already exists
           if gh release view ${{ env.NEXT_VER_CODE }} >/dev/null 2>&1; then
-            echo "Release ${{ env.NEXT_VER_CODE }} exists, adding full release archive..."
+            echo "Release ${{ env.NEXT_VER_CODE }} exists, uploading both archives..."
             gh release upload ${{ env.NEXT_VER_CODE }} "MiniFaceServer-$(date +'%m-%d-%Y').rar" --clobber
-            echo "✅ Full release archive added to existing release"
+            gh release upload ${{ env.NEXT_VER_CODE }} "MiniFaceServer-Background-$(date +'%m-%d-%Y').rar" --clobber
+            echo "✅ Both archives added to existing release"
           else
             echo "Release ${{ env.NEXT_VER_CODE }} does not exist, creating new release..."
-            gh release create ${{ env.NEXT_VER_CODE }} "MiniFaceServer-$(date +'%m-%d-%Y').rar" \
+            gh release create ${{ env.NEXT_VER_CODE }} \
+              "MiniFaceServer-$(date +'%m-%d-%Y').rar" \
+              "MiniFaceServer-Background-$(date +'%m-%d-%Y').rar" \
               --title "${{ env.RELEASE_NAME }}" \
               --notes "# eFootball MinifacesServer - ${{ env.RELEASE_DATE }}
             
             **Release Type:** ${{ env.TRIGGER_TYPE }}
             **Generated:** ${{ env.TRIGGER_DETAILS }}
-            Automated release containing the latest minifaces for eFootball.
+            
+            This release contains **two versions** of the miniface pack:
+            
+            ## 📦 Downloads
+            
+            ### MiniFaceServer-$(date +'%m-%d-%Y').rar (${{ env.ARCHIVE_STANDARD_SIZE }})
+            **Standard Version (No Background)**
+            - Player faces without event backgrounds
+            - Original/simpler implementation  
+            - File size: Nearly identical to background version (same resolution, DXT5 compression)
+            
+            ### MiniFaceServer-Background-$(date +'%m-%d-%Y').rar (${{ env.ARCHIVE_BACKGROUND_SIZE }})
+            **Background Version (Composite)**
+            - Enhanced visuals with event backgrounds composited
+            - Background + foreground merged images
+            - File size: Nearly identical to standard version (same resolution, DXT5 compression)
+            
+            **Both versions have the same resolution and compression. Choose based on visual preference!**
             
             ## Installation
-            1. Copy \"content\" and \"modules\" folder to your sider folder
-            2. Add the following line in your sider.ini:
+            1. Download your preferred version
+            2. Extract the archive
+            3. Copy \"content\" and \"modules\" folder to your sider folder
+            4. Add the following line in your sider.ini:
             \`\`\`
             lua.module = \"MiniFaceServer.lua\"
             \`\`\`
             
             ## Technical Details
-            - Generated using optimized multithreaded downloader
+            - Generated using optimized multithreaded downloader with Python 3.14t free-threading
             - Source: PESMaster database
             - Release Date: ${{ env.RELEASE_DATE }}
             - Total Players: ${{ env.TOTAL_PLAYERS }}
+            - Both versions contain identical player coverage
             
             For more info: https://evoweb.uk/threads/efootball-featured-players-miniface-server-automated-aio.91794/
             ---
-            *This release was generated by GitHub Actions using the optimized script*"
-            echo "✅ New release created with full release archive"
+            *This release was generated by GitHub Actions using the optimized dual-save script*"
+            echo "✅ New release created with both archives"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
