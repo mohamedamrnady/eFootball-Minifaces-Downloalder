@@ -1,3 +1,4 @@
+from check_acl import checkACLID
 import os
 import requests
 import threading
@@ -139,14 +140,16 @@ def miniface_downloader(
 
     for pictures in pictures_div:
         if "teamlogos" in pictures["data-src"]:
-            image_dict["team"] = str(
-                int(
-                    pictures["data-src"]
-                    .split("/teamlogos/")[1]
-                    .split("/")[0]
-                    .replace(".png", "")
-                    .replace("e_", "")
-                    .replace("_w", "")
+            image_dict["team"] = checkACLID(
+                str(
+                    int(
+                        pictures["data-src"]
+                        .split("/teamlogos/")[1]
+                        .split("/")[0]
+                        .replace(".png", "")
+                        .replace("e_", "")
+                        .replace("_w", "")
+                    )
                 )
             )
         elif "graphics/players" in pictures["data-src"]:
