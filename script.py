@@ -36,62 +36,14 @@ except ImportError:
 done_players_lock = threading.Lock()
 done_players = set()
 
-# Skipped players list (persisted between runs)
-skipped_players_lock = threading.Lock()
-skipped_players = set()
-
 # Output directory paths
 OUTPUT_DIR_STANDARD = os.path.join("MinifaceServer", "content", "miniface-server")
 OUTPUT_DIR_BACKGROUND = os.path.join(
     "MinifaceServer-Background", "content", "miniface-server"
 )
-SKIPPED_FILE = os.path.join(OUTPUT_DIR_STANDARD, "skipped_players.txt")
 
 # Global debug flag
 DEBUG = False
-
-
-def load_skipped_players():
-    """Load or create the persistent skip list file"""
-    global skipped_players
-    if not os.path.exists(SKIPPED_FILE):
-        try:
-            with open(SKIPPED_FILE, "a") as _:
-                pass
-        except Exception as e:
-            log_error(f"Failed to create {SKIPPED_FILE}: {e}")
-            return
-        skipped_players = set()
-        return
-    try:
-        with open(SKIPPED_FILE, "r") as f:
-            skipped_players = set(line.strip() for line in f if line.strip())
-        debug_print(
-            f"Loaded {len(skipped_players)} skipped players from {SKIPPED_FILE}"
-        )
-    except Exception as e:
-        log_error(f"Failed to load {SKIPPED_FILE}: {e}")
-        skipped_players = set()
-
-
-def append_skipped_player(player_id: str):
-    """Add a player_id to the in-memory skip list (saved to disk on exit)"""
-    with skipped_players_lock:
-        if player_id not in skipped_players:
-            skipped_players.add(player_id)
-            debug_print(f"Added {player_id} to skip list")
-
-
-def save_skipped_players():
-    """Write the in-memory skip list back to disk"""
-    try:
-        with skipped_players_lock:
-            with open(SKIPPED_FILE, "w") as f:
-                for pid in skipped_players:
-                    f.write(f"{pid}\n")
-        debug_print(f"Saved {len(skipped_players)} skipped players to {SKIPPED_FILE}")
-    except Exception as e:
-        log_error(f"Failed to save skipped players: {e}")
 
 
 def debug_print(message):
@@ -213,9 +165,6 @@ def initialize_script():
         f"Configuration: Teams={MAX_WORKERS_TEAMS}, Players={MAX_WORKERS_PLAYERS}, Delay={REQUEST_DELAY}s"
     )
 
-    # Load persistent skip list so we can avoid HTTP requests early
-    load_skipped_players()
-
     return args
 
 
@@ -243,12 +192,6 @@ def process_player(player_url, team_name, league_name):
     try:
         player_id = str(player_url.split("/player/")[-1].split("/")[0])
 
-        # Early skip if player is in persistent skip list
-        with skipped_players_lock:
-            if player_id in skipped_players:
-                debug_print(f"Skipped {player_id} (in skip list)")
-                return f"Skipped {player_id} (in skip list)"
-
         # Thread-safe check if player already processed
         with done_players_lock:
             if player_id in done_players:
@@ -267,7 +210,6 @@ def process_player(player_url, team_name, league_name):
 
         if not cards_div:
             debug_print(f"No cards found for player {player_id}")
-            append_skipped_player(player_id)
             return f"No cards found for player {player_id}"
 
         cards_div = cards_div[len(cards_div) - 1].find_all(
@@ -276,7 +218,6 @@ def process_player(player_url, team_name, league_name):
 
         if not cards_div:
             debug_print(f"No efootball-2022 cards found for player {player_id}")
-            append_skipped_player(player_id)
             return f"No efootball-2022 cards found for player {player_id}"
 
         for card in cards_div:
@@ -314,26 +255,13 @@ def process_team(team_url, team_counter, total_teams, league_name):
 
         debug_print(f"Found {len(players_urls)} players in team {team_counter}")
 
-        # Filter out players in the persistent skip list before scheduling requests
-        with skipped_players_lock:
-            filtered_players = [
-                url
-                for url in players_urls
-                if str(url.split("/player/")[-1].split("/")[0]) not in skipped_players
-            ]
-        skipped_count = len(players_urls) - len(filtered_players)
-        if skipped_count > 0:
-            debug_print(
-                f"Skipping {skipped_count} players from skip list in team {team_counter}"
-            )
-
         # Process players in this team concurrently
         with ThreadPoolExecutor(max_workers=MAX_WORKERS_PLAYERS) as executor:
             player_futures = {
                 executor.submit(
                     process_player, player_url, f"team_{team_counter}", league_name
                 ): player_url
-                for player_url in filtered_players
+                for player_url in players_urls
             }
 
             results = []
@@ -348,9 +276,9 @@ def process_team(team_url, team_counter, total_teams, league_name):
                     debug_print(f"    {result}")
 
         log_info(
-            f"Completed team {team_counter}/{total_teams} in {league_name} ({successful_players}/{len(filtered_players)} players successful)"
+            f"Completed team {team_counter}/{total_teams} in {league_name} ({successful_players}/{len(players_urls)} players successful)"
         )
-        return f"  ✓ Completed team {team_counter}/{total_teams} in {league_name} ({successful_players}/{len(filtered_players)} players)"
+        return f"  ✓ Completed team {team_counter}/{total_teams} in {league_name} ({successful_players}/{len(players_urls)} players)"
 
     except Exception as e:
         log_error(f"Error processing team {team_url}: {e}")
@@ -475,8 +403,6 @@ def main():
             f"[DEBUG] - Thread configuration used: Teams={MAX_WORKERS_TEAMS}, Players={MAX_WORKERS_PLAYERS}"
         )
         print(f"[DEBUG] - Request delay used: {REQUEST_DELAY}s")
-
-    save_skipped_players()
 
 
 if __name__ == "__main__":

@@ -27,62 +27,14 @@ except ImportError:
 done_players_lock = threading.Lock()
 done_players = set()
 
-# Skipped players list (persisted between runs)
-skipped_players_lock = threading.Lock()
-skipped_players = set()
-
 # Output directory paths
 OUTPUT_DIR_STANDARD = os.path.join("MinifaceServer", "content", "miniface-server")
 OUTPUT_DIR_BACKGROUND = os.path.join(
     "MinifaceServer-Background", "content", "miniface-server"
 )
-SKIPPED_FILE = os.path.join(OUTPUT_DIR_STANDARD, "skipped_players.txt")
 
 # Global debug flag
 DEBUG = False
-
-
-def load_skipped_players():
-    """Load or create the persistent skip list file"""
-    global skipped_players
-    if not os.path.exists(SKIPPED_FILE):
-        try:
-            with open(SKIPPED_FILE, "a") as _:
-                pass
-        except Exception as e:
-            log_error(f"Failed to create {SKIPPED_FILE}: {e}")
-            return
-        skipped_players = set()
-        return
-    try:
-        with open(SKIPPED_FILE, "r") as f:
-            skipped_players = set(line.strip() for line in f if line.strip())
-        debug_print(
-            f"Loaded {len(skipped_players)} skipped players from {SKIPPED_FILE}"
-        )
-    except Exception as e:
-        log_error(f"Failed to load {SKIPPED_FILE}: {e}")
-        skipped_players = set()
-
-
-def append_skipped_player(player_id: str):
-    """Add a player_id to the in-memory skip list (saved to disk on exit)"""
-    with skipped_players_lock:
-        if player_id not in skipped_players:
-            skipped_players.add(player_id)
-            debug_print(f"Added {player_id} to skip list")
-
-
-def save_skipped_players():
-    """Write the in-memory skip list back to disk"""
-    try:
-        with skipped_players_lock:
-            with open(SKIPPED_FILE, "w") as f:
-                for pid in skipped_players:
-                    f.write(f"{pid}\n")
-        debug_print(f"Saved {len(skipped_players)} skipped players to {SKIPPED_FILE}")
-    except Exception as e:
-        log_error(f"Failed to save skipped players: {e}")
 
 
 def debug_print(message):
@@ -191,9 +143,6 @@ def initialize_script():
         print("Loading Featured Players...")
     debug_print(f"Configuration: Players={MAX_WORKERS_PLAYERS}, Delay={REQUEST_DELAY}s")
 
-    # Load persistent skip list so we can avoid HTTP requests early
-    load_skipped_players()
-
     return args
 
 
@@ -223,12 +172,6 @@ def process_featured_card(card):
         if not player_id:
             debug_print("Could not extract player ID from card")
             return "✗ Could not extract player ID"
-
-        # Early skip if player is in persistent skip list
-        with skipped_players_lock:
-            if player_id in skipped_players:
-                debug_print(f"Skipped {player_id} (in skip list)")
-                return f"Skipped {player_id} (in skip list)"
 
         # Thread-safe check if player already processed
         with done_players_lock:
@@ -304,27 +247,15 @@ def main():
 
         debug_print(f"Found {len(all_cards)} featured player cards")
 
-        # Filter out cards for players in the persistent skip list
-        filtered_cards = []
-        with skipped_players_lock:
-            for card in all_cards:
-                player_id = extract_player_id_from_card(card)
-                if player_id and player_id not in skipped_players:
-                    filtered_cards.append(card)
-
-        skipped_count = len(all_cards) - len(filtered_cards)
-        if skipped_count > 0:
-            debug_print(f"Skipping {skipped_count} players from skip list")
-
         if not args.quiet:
-            print(f"Processing {len(filtered_cards)} featured players...")
+            print(f"Processing {len(all_cards)} featured players...")
 
         # Process featured players concurrently
         successful_players = 0
         with ThreadPoolExecutor(max_workers=MAX_WORKERS_PLAYERS) as executor:
             futures = {
                 executor.submit(process_featured_card, card): card
-                for card in filtered_cards
+                for card in all_cards
             }
 
             for future in as_completed(futures):
@@ -344,7 +275,7 @@ def main():
         print(
             f"\n🎉 Featured players download complete! Processed {total_players} unique players in {overall_elapsed_time:.2f}s"
         )
-        print(f"Success rate: {successful_players}/{len(filtered_cards)}")
+        print(f"Success rate: {successful_players}/{len(all_cards)}")
         print(
             f"Average time per player: {overall_elapsed_time/max(total_players, 1):.2f}s"
         )
@@ -362,8 +293,6 @@ def main():
         log_error(f"Network error fetching featured players: {e}")
     except Exception as e:
         log_error(f"Unexpected error: {e}")
-
-    save_skipped_players()
 
 
 if __name__ == "__main__":
