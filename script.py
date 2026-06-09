@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue
 from bs4 import BeautifulSoup as bs
 from get_miniface import miniface_downloader
-from teams import league_info_scrapper, teams_urls_scrapper
+from teams import league_info_scrapper, teams_urls_scrapper, generate_alternate_team_urls
 from players_in_team import players_in_team
 import time
 
@@ -19,6 +19,8 @@ try:
         MAX_WORKERS_IMAGES,
         REQUEST_DELAY,
         REQUEST_TIMEOUT,
+        FETCH_ALTERNATE_NATIONALS,
+        ALTERNATE_TEAM_OFFSETS,
     )
 except ImportError:
     # Fallback configuration if config.py doesn't exist
@@ -27,6 +29,8 @@ except ImportError:
     MAX_WORKERS_IMAGES = 6
     REQUEST_DELAY = 0.1
     REQUEST_TIMEOUT = 30
+    FETCH_ALTERNATE_NATIONALS = False
+    ALTERNATE_TEAM_OFFSETS = []
 
 # Thread-safe set for tracking processed players
 done_players_lock = threading.Lock()
@@ -361,6 +365,20 @@ def process_league(league_counter, league_url, league_name, total_leagues):
         if not teams_urls:
             log_error(f"No teams found for league {league_name}")
             return f"No teams found for league {league_name}"
+
+        # Generate alternate team URLs for national leagues
+        is_national = "National" in league_name
+        if is_national and FETCH_ALTERNATE_NATIONALS and ALTERNATE_TEAM_OFFSETS:
+            alternate_urls = []
+            for team_url in teams_urls:
+                alternate_urls.extend(
+                    generate_alternate_team_urls(team_url, ALTERNATE_TEAM_OFFSETS)
+                )
+            if alternate_urls:
+                debug_print(
+                    f"Generated {len(alternate_urls)} alternate national team URLs"
+                )
+                teams_urls.extend(alternate_urls)
 
         debug_print(f"Found {len(teams_urls)} teams in {league_name}")
 

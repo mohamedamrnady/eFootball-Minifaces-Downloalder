@@ -35,6 +35,12 @@ REQUEST_DELAY = 0.5  # Delay between main requests (seconds)
 IMAGE_REQUEST_DELAY = 0.5  # Delay between image downloads (seconds)
 REQUEST_TIMEOUT = 30  # Timeout for all HTTP requests (seconds)
 
+# Alternate National Team Offsets
+# Some national teams have alternate pages with different cards.
+# Enable this to fetch alternate versions by replacing the team ID with (id + offset).
+FETCH_ALTERNATE_NATIONALS = True
+ALTERNATE_TEAM_OFFSETS = [0x14000]
+
 # Retry Configuration
 MAX_RETRIES = 3  # Number of retries for failed requests
 RETRY_DELAY_BASE = 1  # Base delay for retries (exponential backoff)

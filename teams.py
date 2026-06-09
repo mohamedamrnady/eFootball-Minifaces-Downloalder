@@ -57,6 +57,32 @@ def teams_urls_scrapper(url):
     return urls
 
 
+def generate_alternate_team_urls(team_url, offsets):
+    """
+    Generate alternate team URLs by replacing the team ID with (id + offset).
+
+    Args:
+        team_url: Original team URL (e.g. https://www.pesmaster.com/efootball-2022/team/34/)
+        offsets: List of integer offsets to add to the team ID
+
+    Returns:
+        List of alternate team URLs
+    """
+    alternate_urls = []
+    try:
+        parts = team_url.rstrip("/").split("/team/")
+        if len(parts) != 2:
+            return alternate_urls
+        base_url = parts[0] + "/team/"
+        team_id = int(parts[1])
+        for offset in offsets:
+            new_id = team_id + offset
+            alternate_urls.append(f"{base_url}{new_id}/")
+    except (ValueError, IndexError):
+        pass
+    return alternate_urls
+
+
 def league_info_scrapper(url, needed, pes_version):
     """
     Optimized version with better error handling and timeouts
